@@ -4,9 +4,8 @@ use strict;
 use warnings;
 use Test::More;
 
-plan tests => 1;
-
 use_ok('Sub::Multi::Tiny', ':nop');
+use_ok('Sub::Multi::Tiny::SigParse');
 
 BAIL_OUT("Further tests rely on all modules compiling.")
     unless Test::Builder->new->is_passing;

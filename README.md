@@ -55,13 +55,13 @@ You can also look for information at:
 
 This isn't Damian code ;) .
 
+# AUTHOR
+
+Chris White <cxw@cpan.org>
+
 # LICENSE
 
 Copyright (C) 2019 Chris White <cxw@cpan.org>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
-
-# AUTHOR
-
-Chris White <cxw@cpan.org>
