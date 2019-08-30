@@ -1,9 +1,12 @@
+#!/usr/bin/env perl
+use 5.006;
 use strict;
-use Test::More 0.98;
+use warnings;
+use Test::More;
+use Test::UseAllModules;
 
-use_ok $_ for qw(
-    Sub::Multi::Tiny
-);
+BEGIN { all_uses_ok; }
+
+diag( "Testing Sub::Multi::Tiny $Sub::Multi::Tiny::VERSION, Perl $], $^X" );
 
 done_testing;
-
