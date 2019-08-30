@@ -52,6 +52,9 @@ Sub::Multi::Tiny - Multisubs/multimethods (multiple dispatch) yet another way!
 Sub::Multi::Tiny is a library for making multisubs, aka multimethods,
 aka multiple-dispatch subroutines.
 
+TODO explain: if sub C<MakeDispatcher()> exists in the package, it will
+be called to create the dispatcher.
+
 =cut
 
 # }}}1
@@ -62,6 +65,11 @@ sub _croak {
     goto &Carp::croak;
 }
 
+sub _carp {
+    require Carp;
+    goto &Carp::carp;
+}
+
 # Information about the multisubs so we can create the dispatchers at
 # CHECK time.
 my %_multisubs;
@@ -69,26 +77,35 @@ my %_multisubs;
 # Sanity check: any :M will die after the CHECK block below runs.
 my $_did_check_run;
 
+# Accessor
+sub _did_check_run { !!$_did_check_run; }
+
 # CHECK: Fill in the dispatchers for any multisubs we've created.
 # Note: attributes are applied at CHECK time.  TODO see if this happens
 # late enough to work.
+# NOTE: This runs on -c also.
 
 CHECK {
     say "In CHECK block";
     $_did_check_run = 1;
+    say STDERR Dumper(\%_multisubs);
     while(my ($multisub_fullname, $hr) = each(%_multisubs)) {
         my $dispatcher = _make_dispatcher($hr)
             or die "Could not create dispatcher for $multisub_fullname\()";
 
         eval { no strict 'refs'; *{$multisub_fullname} = $dispatcher };
         die "Could not assign dispatcher for $multisub_fullname\:\n$@" if $@;
-
     } #foreach multisub
 } #CHECK
 
 sub import {
     my $multi_package = caller;     # The package that defines the multisub
     my $my_package = shift;         # The package we are
+    if(@_ && $_[0] eq ':nop') {
+        say STDERR "# :nop => Taking no action";
+        return;
+    }
+
     say "Target $multi_package package $my_package";
     my ($target_package, $subname) = ($multi_package =~ m{^(.+?)::([^:]+)$});
         # $target_package is the package that will be able to call the multisub
@@ -98,15 +115,15 @@ sub import {
     _croak "Can't redefine multi sub $multi_package\()"
         if exists $_multisubs{$multi_package};
 
+    # Create the vars - they will be accessed as package variables
+    my @possible_params = @_;
+    _croak "Please list the sub parameters" unless @possible_params;
+    vars->import::into($multi_package, @possible_params);
+
     # Make a stub that we will redefine later
     say "Making $multi_package\()";
     subs->import::into($target_package, $subname);
     # TODO add stub for callsame/nextwith/...
-
-    # Add in the vars - they will be accessed as package parameters
-    _croak "Please list the sub parameters" unless @_;
-    my @possible_params = @_;
-    vars->import::into($multi_package, @possible_params);
 
     # Save the patch
     $_multisubs{$multi_package} = {
@@ -204,8 +221,13 @@ sub M :ATTR(CODE,RAWDATA) {
         "with data ($data)\n",
         "in phase $phase\n",
         "in file $filename at line $linenum\n";
+EOT
 
-    die "CHECK already ran - please file a bug report" if $_did_check_run;
+    # Trap out-of-sequence calls.  Currently you can't create a new multisub
+    # via eval at runtime.  TODO use UNITCHECK instead to permit doing so?
+    $code .= _line_mark_string <<EOT;
+    die "CHECK already ran - please file a bug report"
+        if @{[__PACKAGE__]}\::_did_check_run();
 EOT
 
     # Parse and validate the args
@@ -235,6 +257,16 @@ sub _make_dispatcher {
     say "Making dispatcher for: ", Dumper($hr);
     die "No implementations given for $hr->{defined_in}"
         unless @{$hr->{impls}};
+
+#   my $custom_dispatcher = do {
+#       no strict 'refs';
+#       *{ $hr->{defined_in} . '::MakeDispatcher' }{CODE}
+#   };
+
+#   return $custom_dispatcher->($hr) if defined $custom_dispatcher;
+
+    ...
+
 } #_make_dispatcher
 
 1;

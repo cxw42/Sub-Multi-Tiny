@@ -27,6 +27,9 @@ Sub::Multi::Tiny - Multisubs/multimethods (multiple dispatch) yet another way!
 Sub::Multi::Tiny is a library for making multisubs, aka multimethods,
 aka multiple-dispatch subroutines.
 
+TODO explain: if sub `MakeDispatcher()` exists in the package, it will
+be called to create the dispatcher.
+
 # SUPPORT
 
 You can find documentation for this module with the perldoc command.

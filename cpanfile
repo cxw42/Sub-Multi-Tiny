@@ -11,6 +11,10 @@ requires 'warnings';
 
 on 'test' => sub {
     requires 'Test::More', '0.98';
-    requires 'Test::UseAllModules', '0.15';
 };
 
+on 'build' => sub {
+    requires 'Parse::Yapp';
+};
+
+# vi: set ft=perl: #

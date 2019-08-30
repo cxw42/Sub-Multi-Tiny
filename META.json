@@ -26,6 +26,11 @@
       ]
    },
    "prereqs" : {
+      "build" : {
+         "requires" : {
+            "Parse::Yapp" : "0"
+         }
+      },
       "configure" : {
          "requires" : {
             "Module::Build::Tiny" : "0.035"
@@ -55,8 +60,7 @@
       },
       "test" : {
          "requires" : {
-            "Test::More" : "0.98",
-            "Test::UseAllModules" : "0.15"
+            "Test::More" : "0.98"
          }
       }
    },
@@ -75,5 +79,5 @@
    "version" : "0.000001",
    "x_authority" : "cpan:CXW",
    "x_serialization_backend" : "JSON::PP version 2.27400_02",
-   "x_static_install" : 1
+   "x_static_install" : 0
 }
