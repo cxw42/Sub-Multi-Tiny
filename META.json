@@ -1,7 +1,7 @@
 {
-   "abstract" : "Multisub/multimethod (multiple dispatch) - Yet Another!",
+   "abstract" : "Multisubs/multimethods (multiple dispatch) yet another way!",
    "author" : [
-      "Chris White <cxwembedded@gmail.com>"
+      "Chris White <cxw@cpan.org>"
    ],
    "dynamic_config" : 0,
    "generated_by" : "Minilla/v3.1.999, CPAN::Meta::Converter version 2.150010",

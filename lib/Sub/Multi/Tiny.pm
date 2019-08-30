@@ -25,7 +25,7 @@ our $VERSION = "0.000001";
 
 =head1 NAME
 
-Sub::Multi::Tiny - Multisub/multimethod (multiple dispatch) - Yet Another!
+Sub::Multi::Tiny - Multisubs/multimethods (multiple dispatch) yet another way!
 
 =head1 SYNOPSIS
 
@@ -33,7 +33,7 @@ Sub::Multi::Tiny - Multisub/multimethod (multiple dispatch) - Yet Another!
         package main::my_multi;     # We're making main::my_multi()
         use Sub::Multi::Tiny qw($foo, $bar, @quux);     # All possible params
 
-        sub first :M($foo, @quux) { # Name will be ignored
+        sub first :M($foo, @quux) { # sub's name will be ignored
             print "first\n";
         }
 
@@ -43,15 +43,14 @@ Sub::Multi::Tiny - Multisub/multimethod (multiple dispatch) - Yet Another!
 
     }
 
+    # Back in package main, my_multi() is created just before the run phase.
     my_multi("just a scalar");              # -> second
     my_multi("a scalar", "and some more");  # -> first
 
 =head1 DESCRIPTION
 
-Sub::Multi::Tiny is ...
-
-Implementations must start with C<[a-z]> - any other names (e.g., C<__ANON__>,
-C<BEGIN>) will be ignored.
+Sub::Multi::Tiny is a library for making multisubs, aka multimethods,
+aka multiple-dispatch subroutines.
 
 =cut
 
@@ -81,25 +80,11 @@ CHECK {
         my $dispatcher = _make_dispatcher($hr)
             or die "Could not create dispatcher for $multisub_fullname\()";
 
-        #my $multi_package = $hr->{defined_in} . '::';
-        #my $stash = do { no strict 'refs'; \%{$multisub_fullname} };
         eval { no strict 'refs'; *{$multisub_fullname} = $dispatcher };
         die "Could not assign dispatcher for $multisub_fullname\:\n$@" if $@;
-        #_croak "Could not load stash for $multi_package" unless $stash;
-
-#        foreach my $varname (keys %$stash) {
-#            say "Checking key $varname";
-#            next unless $varname =~ /^[a-z]/;
-#            next unless do { no strict 'refs';
-#                                defined &{$multisub_fullname . $varname} };
-#                # Thanks to zentara,
-#                # https://www.perlmonks.org/?node_id=697760
-#
-#            say "Found implementation $varname";
-#        }
 
     } #foreach multisub
-}
+} #CHECK
 
 sub import {
     my $multi_package = caller;     # The package that defines the multisub
@@ -256,16 +241,45 @@ sub _make_dispatcher {
 # Rest of the documentation {{{1
 __END__
 
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc Sub::Multi::Tiny
+
+You can also look for information at:
+
+=over
+
+=item * GitHub: The project's main repository and issue tracker
+
+L<https://github.com/cxw42/Sub-Multi-Tiny>
+
+=item * MetaCPAN
+
+L<Sub::Multi::Tiny>
+
+=item * This distribution
+
+See the tests in the C<t/> directory distributed with this software
+for examples.
+
+=back
+
+=head1 BUGS
+
+This isn't Damian code ;) .
+
 =head1 LICENSE
 
-Copyright (C) Chris White.
+Copyright (C) 2019 Chris White E<lt>cxw@cpan.orgE<gt>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
 =head1 AUTHOR
 
-Chris White E<lt>cxwembedded@gmail.comE<gt>
+Chris White E<lt>cxw@cpan.orgE<gt>
 
 =cut
 
