@@ -53,7 +53,7 @@ sub CheckSuccess {
         $ty = _u $ty;
         $val = _u $val;
         $test->[$_] = _u $test->[$_] foreach 0..$#$test;
-        diag "Got $ty = $val";
+        #diag "Got $ty = $val";
 
         # Test
         is($ty, $test->[0],  "Token $test->[0] (line $line test $testnum)");
@@ -91,6 +91,15 @@ CheckSuccess("\t,    ", [[SEPAR => 0]]);
 CheckSuccess("  ,\t", [[SEPAR => 0]]);
 CheckSuccess(" \n  , \n\t", [[SEPAR => 0]]);
 
+# Names
+CheckSuccess('$foo',[[NAME=>'$foo']]);
+CheckSuccess('   $foo',[[NAME=>'$foo']]);
+CheckSuccess('$foo   ',[[NAME=>'$foo']]);
+CheckSuccess('@foo',[[NAME=>'@foo']]);
+CheckSuccess('%foo',[[NAME=>'%foo']]);
+CheckSuccess('&foo',[[NAME=>'&foo']]);
+CheckSuccess('*foo',[[NAME=>'*foo']]);
+
 # where {} clauses
 CheckSuccess('where {1}', [[WHERE=>'{1}']]);
 CheckSuccess('WHERE {1}', [[WHERE=>'{1}']]);
@@ -123,8 +132,9 @@ CheckSuccess("Int\t\n String  ",[[TYPE=>'Int'], [TYPE=>'String']]);
 CheckSuccess('Int Array[Foo]  ',[[TYPE=>'Int'], [TYPE=>'Array[Foo]']]);
 
 # A random big test
-CheckSuccess('   {x} ,    where { $foo > 1 }, 42[bar] {long one},', [
+CheckSuccess('   {x} $foo,    where { $foo > 1 }, 42[bar] {long one},', [
     [ TYPE => '{x}' ],
+    [ NAME => '$foo' ],
     [ SEPAR => 0 ],
     [ WHERE => '{ $foo > 1 }' ],
     [ SEPAR => 0 ],

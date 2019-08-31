@@ -60,18 +60,18 @@ And then:
 # Rules
 
 signature:
-                                    { +{} }     # empty
-    |   parameter
-    |   signature SEPAR parameter
+                                            { [] }  # empty
+    |   parameter                           { [ $_[1] ] }
+    |   parameter SEPAR signature           { [ $_[1], @{$_[3]} ] }
     # Permit trailing comma
-    |   signature SEPAR parameter SEPAR
+    |   parameter SEPAR signature SEPAR     { [ $_[1], @{$_[3]} ] }
     ;
 
 parameter:
-        NAME
-    |   NAME WHERE
-    |   TYPE NAME
-    |   TYPE NAME WHERE
+        NAME                { +{name=>$_[1]} }
+    |   NAME WHERE          { +{name=>$_[1], where=>$_[2]} }
+    |   TYPE NAME           { +{name=>$_[2],               type => $_[1]} }
+    |   TYPE NAME WHERE     { +{name=>$_[2], where=>$_[3], type => $_[1]} }
     ;
 
 %%
@@ -87,9 +87,13 @@ sub _next_token {
     my $text = $parser->YYData->{TEXT};
 
     $$text =~ m/\G\s+/gc;    # Skip H and V whitespace
+    $parser->YYData->{CURR_TOK_POS} = pos($$text);
+
     return ('', undef) unless (pos($$text)//0) < length($$text);    # EOF
 
     $$text =~ m/\G,/gc and return (SEPAR => 0); # 0 is a dummy value
+
+    $$text =~ m/\G([\$\@\%\&\*]\w+)\b/gc and return (NAME => $1) ;
 
     if($$text =~ m/\Gwhere\s*\{/gci) {
         pos($$text) -= 1;    # Get the lbrace back
@@ -123,14 +127,28 @@ sub _next_token {
 # Report an error
 sub _report_error {
     my $parser = shift;
+    my $startpos = $parser->YYData->{CURR_TOK_POS};
+    my $endpos = pos(${ $parser->YYData->{TEXT} });
     my $got = $parser->YYCurtok || '<end of input>';
     my $val='';
     $val = ' (' . $parser->YYCurval . ')' if $parser->YYCurval;
-    die 'Syntax error: could not understand ', $got, $val, "\n";
+
+    my $errmsg  = 'Syntax error: could not understand ' . $got . $val .
+                    " at positions $startpos..$endpos";
     if(ref($parser->YYExpect) eq 'ARRAY') {
-        print 'Expected one of: ', join(',', @{$parser->YYExpect}), "\n";
+        $errmsg .= ".\nExpected one of: " . join(',', @{$parser->YYExpect});
+    } else {
+        $errmsg .= ':'
     }
-    return;
+
+    # Print the text and flag the error
+    my $copy = ${ $parser->YYData->{TEXT} };
+    $copy =~ s/\s/ /g;  # Normalize spaces so pos values line up
+    $errmsg .= "\n$copy";
+    $errmsg .= "\n" . (' ' x $startpos) . ('^' x ($endpos-$startpos));
+
+    $errmsg .= "\n";    # No stack trace
+    die $errmsg;
 } #_report_error()
 
 # }}}1
@@ -151,9 +169,15 @@ sub Parse {
     my $parser = __PACKAGE__->new;
     my $hrData = $parser->YYData;
 
-    # Data we use while parsing.  Store it as a reference so pos() will
+    # Data we use while parsing.
+
+    # TEXT: The input text.  Store it as a reference so pos() will
     # be preserved across calls to _next_token.
     $hrData->{TEXT} = \"$text";
+
+    # CURR_TOK_POS: the pos() value where the current token started.
+    # Used in reporting errors.
+    $hrData->{CURR_TOK_POS} = -1;
 
     my $hrRetval = $parser->YYParse(yylex => \&_next_token,
         yyerror => \&_report_error,
