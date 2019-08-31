@@ -10,12 +10,13 @@ requires 'subs';
 requires 'vars';
 requires 'warnings';
 
-on 'test' => sub {
-    requires 'Test::More', '0.98';
-};
-
 on 'build' => sub {
     requires 'Parse::Yapp';
+};
+
+on 'test' => sub {
+    requires 'Test::Fatal', '0.014';
+    requires 'Test::More', '0.98';
 };
 
 # vi: set ft=perl: #

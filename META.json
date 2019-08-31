@@ -61,6 +61,7 @@
       },
       "test" : {
          "requires" : {
+            "Test::Fatal" : "0.014",
             "Test::More" : "0.98"
          }
       }

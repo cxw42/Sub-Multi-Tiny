@@ -85,31 +85,39 @@ parameter:
 sub _next_token {
     my $parser = shift;
     my $text = $parser->YYData->{TEXT};
-    return ('', undef) unless $text;    # EOF
 
-    $text =~ m/\G\s+/gc;    # Skip H and V whitespace
-    $text =~ m/\G,/gc and return (SEPAR => undef);
+    $$text =~ m/\G\s+/gc;    # Skip H and V whitespace
+    return ('', undef) unless (pos($$text)//0) < length($$text);    # EOF
 
-    if($text =~ m/\Gwhere\s*\{/gci) {
-        pos($text) -= 1;    # Get the lbrace back
-        my ($block) = extract_codeblock($text);     # Updates pos()
+    $$text =~ m/\G,/gc and return (SEPAR => 0); # 0 is a dummy value
+
+    if($$text =~ m/\Gwhere\s*\{/gci) {
+        pos($$text) -= 1;    # Get the lbrace back
+        my ($block) = extract_codeblock($$text);     # Updates pos()
         return (WHERE => $block) if defined $block;
         die "Saw a 'where' without a valid block after it";
     }
 
     # Permit braced expressions for complex type checks
-    if($text =~ m/\G\s*\{/gc) {
-        pos($text) -= 1;    # Get the lbrace back
-        my ($block) = extract_codeblock($text);     # Updates pos()
+    if($$text =~ m/\G\{/gc) {
+        pos($$text) -= 1;    # Get the lbrace back
+        my ($block) = extract_codeblock($$text);     # Updates pos()
         return (TYPE => $block) if defined $block;
         die "Saw an opening brace without a valid block after it";
     }
 
+    # If the next thing is a backslash, die --- prohibit backslash to start
+    # a typecheck as a guard against '' vs "" confusion.  If you want a
+    # backslash, use the {} form.
+    if($$text =~ m{\G\\}gc) {
+        die "Saw a backslash where I don't know what to do with it!  ('' vs \"\" confusion?)";
+    }
+
     # Otherwise, assume a single word is a typecheck
-    $text =~ m/\G(\S+)/gc and return (TYPE => $1);
+    $$text =~ m/\G(\S+)/gc and return (TYPE => $1);
 
     die "This should never happen!  Unlexable text was: " .
-        substr($text, pos($text));
+        substr($$text, pos($$text));
 } #_next_token()
 
 # Report an error
@@ -143,8 +151,9 @@ sub Parse {
     my $parser = __PACKAGE__->new;
     my $hrData = $parser->YYData;
 
-    # Data we use while parsing
-    $hrData->{TEXT} = $text;
+    # Data we use while parsing.  Store it as a reference so pos() will
+    # be preserved across calls to _next_token.
+    $hrData->{TEXT} = \"$text";
 
     my $hrRetval = $parser->YYParse(yylex => \&_next_token,
         yyerror => \&_report_error,
