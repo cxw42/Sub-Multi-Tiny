@@ -30,6 +30,33 @@ aka multiple-dispatch subroutines.
 TODO explain: if sub `MakeDispatcher()` exists in the package, it will
 be called to create the dispatcher.
 
+# RATIONALE / SEE ALSO
+
+TODO explain why yet another module!
+
+- [Class::Multimethods](https://metacpan.org/pod/Class::Multimethods)
+- [Class::Multimethods::Pure](https://metacpan.org/pod/Class::Multimethods::Pure)
+- [Dios](https://metacpan.org/pod/Dios)
+- [Logic](https://metacpan.org/pod/Logic)
+
+    This one is fairly clean, but uses a source filter.  I have not had much
+    experience with source filters, so am reluctant.
+
+- [Kavorka::Manual::MultiSubs](https://metacpan.org/pod/Kavorka::Manual::MultiSubs) (and [Moops](https://metacpan.org/pod/Moops))
+- [MooseX::MultiMethods](https://metacpan.org/pod/MooseX::MultiMethods)
+
+    I am not ready to move to full [Moose](https://metacpan.org/pod/Moose)!
+
+- [MooseX::Params](https://metacpan.org/pod/MooseX::Params)
+
+    As above.
+
+- [Sub::Multi](https://metacpan.org/pod/Sub::Multi)
+- [Sub::SmartMatch](https://metacpan.org/pod/Sub::SmartMatch)
+
+    This one looks very interesting, but I haven't used smartmatch enough
+    to be fully comfortable with it.
+
 # SUPPORT
 
 You can find documentation for this module with the perldoc command.

@@ -273,6 +273,42 @@ sub _make_dispatcher {
 # Rest of the documentation {{{1
 __END__
 
+=head1 RATIONALE / SEE ALSO
+
+TODO explain why yet another module!
+
+=over
+
+=item L<Class::Multimethods>
+
+=item L<Class::Multimethods::Pure>
+
+=item L<Dios>
+
+=item L<Logic>
+
+This one is fairly clean, but uses a source filter.  I have not had much
+experience with source filters, so am reluctant.
+
+=item L<Kavorka::Manual::MultiSubs> (and L<Moops>)
+
+=item L<MooseX::MultiMethods>
+
+I am not ready to move to full L<Moose>!
+
+=item L<MooseX::Params>
+
+As above.
+
+=item L<Sub::Multi>
+
+=item L<Sub::SmartMatch>
+
+This one looks very interesting, but I haven't used smartmatch enough
+to be fully comfortable with it.
+
+=back
+
 =head1 SUPPORT
 
 You can find documentation for this module with the perldoc command.
