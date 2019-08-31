@@ -16,6 +16,7 @@ use vars ();
 use warnings;
 
 use Import::Into;
+use Sub::Multi::Tiny::SigParse;
 
 our $VERSION = "0.000001";
 
@@ -102,7 +103,7 @@ sub import {
     my $multi_package = caller;     # The package that defines the multisub
     my $my_package = shift;         # The package we are
     if(@_ && $_[0] eq ':nop') {
-        say STDERR "# :nop => Taking no action";
+        say STDERR '# ' . __PACKAGE__ . ':nop => Taking no action';
         return;
     }
 
@@ -198,6 +199,7 @@ sub _parse_arglist {
     say "Parsing args for $funcname: $spec";
 
     # TODO RESUME HERE - parse the parameter specification and return it
+    my $parsed = Sub::Multi::Tiny::SigParse($spec);
 } #_parse_arglist
 
 # Create the source for the M attribute handler for a given package
@@ -265,7 +267,7 @@ sub _make_dispatcher {
 
 #   return $custom_dispatcher->($hr) if defined $custom_dispatcher;
 
-    ...
+    die "Unimplemented";
 
 } #_make_dispatcher
 

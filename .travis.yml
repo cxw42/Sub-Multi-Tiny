@@ -1,6 +1,8 @@
 language: perl
+dist: trusty
 sudo: false
 perl:
+  - "5.10"
   - "5.12"
   - "5.14"
   - "5.16"
