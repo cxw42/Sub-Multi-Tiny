@@ -11,6 +11,8 @@ use 5.010001;
 use strict;
 use warnings;
 
+use Text::Balanced qw(extract_codeblock);
+
 # }}}1
 # Documentation {{{1
 
@@ -40,10 +42,17 @@ And then:
 #############################################################################
 # Token and precedence definitions
 
-%token TODO
+# Separator (usually a comma)
+%token SEPAR
 
+# Type before a variable name
+%token TYPE
 
-%left TODO
+# Name with a sigil.  TODO slurpies.
+%token NAME
+
+# "where BLOCK"
+%token WHERE
 
 %%
 
@@ -52,8 +61,18 @@ And then:
 
 signature:
                                     { +{} }     # empty
-        # TODO
-        ;
+    |   parameter
+    |   signature SEPAR parameter
+    # Permit trailing comma
+    |   signature SEPAR parameter SEPAR
+    ;
+
+parameter:
+        NAME
+    |   NAME WHERE
+    |   TYPE NAME
+    |   TYPE NAME WHERE
+    ;
 
 %%
 
@@ -68,7 +87,29 @@ sub _next_token {
     my $text = $parser->YYData->{TEXT};
     return ('', undef) unless $text;    # EOF
 
-    ...
+    $text =~ m/\G\s+/gc;    # Skip H and V whitespace
+    $text =~ m/\G,/gc and return (SEPAR => undef);
+
+    if($text =~ m/\Gwhere\s*\{/gci) {
+        pos($text) -= 1;    # Get the lbrace back
+        my ($block) = extract_codeblock($text);     # Updates pos()
+        return (WHERE => $block) if defined $block;
+        die "Saw a 'where' without a valid block after it";
+    }
+
+    # Permit braced expressions for complex type checks
+    if($text =~ m/\G\s*\{/gc) {
+        pos($text) -= 1;    # Get the lbrace back
+        my ($block) = extract_codeblock($text);     # Updates pos()
+        return (TYPE => $block) if defined $block;
+        die "Saw an opening brace without a valid block after it";
+    }
+
+    # Otherwise, assume a single word is a typecheck
+    $text =~ m/\G(\S+)/gc and return (TYPE => $1);
+
+    die "This should never happen!  Unlexable text was: " .
+        substr($text, pos($text));
 } #_next_token()
 
 # Report an error

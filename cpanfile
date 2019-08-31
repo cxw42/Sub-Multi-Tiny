@@ -4,6 +4,7 @@ requires 'attributes';
 requires 'Carp';
 requires 'Guard', '1.023';
 requires 'Import::Into', '1.002005';
+requires 'Text::Balanced', '2.01';
 requires 'strict';
 requires 'subs';
 requires 'vars';
