@@ -2,5 +2,5 @@ Revision history for Perl extension Sub-Multi-Tiny
 
 {{$NEXT}}
 
-    - Initial release to CPAN
+    - Initial release to CPAN.  Only supports dispatch by arity.
 

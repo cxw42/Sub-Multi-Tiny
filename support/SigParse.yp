@@ -60,7 +60,7 @@ And then:
 # Rules
 
 signature:
-                                            { [] }  # empty
+                                            { [] }  # always return arrayref
     |   parameter                           { [ $_[1] ] }
     |   parameter SEPAR signature           { [ $_[1], @{$_[3]} ] }
     # Permit trailing comma

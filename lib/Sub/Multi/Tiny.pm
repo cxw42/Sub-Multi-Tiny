@@ -15,8 +15,11 @@ use subs ();
 use vars ();
 use warnings;
 
+#use Data::Dumper;   #DEBUG
+
 use Import::Into;
 use Sub::Multi::Tiny::SigParse;
+use Sub::Multi::Tiny::Util;
 
 our $VERSION = "0.000001";
 
@@ -32,21 +35,24 @@ Sub::Multi::Tiny - Multisubs/multimethods (multiple dispatch) yet another way!
 
     {
         package main::my_multi;     # We're making main::my_multi()
-        use Sub::Multi::Tiny qw($foo, $bar, @quux);     # All possible params
+        use Sub::Multi::Tiny qw($foo $bar);     # All possible params
 
-        sub first :M($foo, @quux) { # sub's name will be ignored
-            print "first\n";
+        sub first :M($foo, $bar) { # sub's name will be ignored
+            return "first";
         }
 
         sub second :M($foo) {
-            print "second\n";
+            return "second";
         }
 
     }
 
     # Back in package main, my_multi() is created just before the run phase.
-    my_multi("just a scalar");              # -> second
-    my_multi("a scalar", "and some more");  # -> first
+    say my_multi("a scalar", "and some more");  # -> "first"
+    say my_multi("just a scalar");              # -> "second"
+
+B<Limitation:> At present, dispatch is solely by arity, and only one
+candidate can have each arity.  This limitation will be removed in the future.
 
 =head1 DESCRIPTION
 
@@ -60,36 +66,24 @@ be called to create the dispatcher.
 
 # }}}1
 
-# Lazy-load Carp
-sub _croak {
-    require Carp;
-    goto &Carp::croak;
-}
-
-sub _carp {
-    require Carp;
-    goto &Carp::carp;
-}
-
 # Information about the multisubs so we can create the dispatchers at
-# CHECK time.
+# INIT time.
 my %_multisubs;
 
-# Sanity check: any :M will die after the CHECK block below runs.
-my $_did_check_run;
+# Sanity check: any :M will die after the INIT block below runs.
+my $_dispatchers_created;
 
 # Accessor
-sub _did_check_run { !!$_did_check_run; }
+sub _dispatchers_created { !!$_dispatchers_created; }
 
-# CHECK: Fill in the dispatchers for any multisubs we've created.
-# Note: attributes are applied at CHECK time.  TODO see if this happens
-# late enough to work.
-# NOTE: This runs on -c also.
+# INIT Fill in the dispatchers for any multisubs we've created.
+# Note: attributes are applied at CHECK time.  We use INIT since that
+# way compilation failures prevent this code from running.
 
-CHECK {
-    say "In CHECK block";
-    $_did_check_run = 1;
-    say STDERR Dumper(\%_multisubs);
+INIT {
+    say "In INIT block";
+    $_dispatchers_created = 1;
+    #say STDERR Dumper(\%_multisubs);
     while(my ($multisub_fullname, $hr) = each(%_multisubs)) {
         my $dispatcher = _make_dispatcher($hr)
             or die "Could not create dispatcher for $multisub_fullname\()";
@@ -131,7 +125,7 @@ sub import {
         used_by => $target_package,
         defined_in => $multi_package,
         subname => $subname,
-        possible_params => [@possible_params],
+        possible_params => +{ map { ($_ => 1) } @possible_params },
         impls => [],    # Implementations - subs tagged :M
     };
 
@@ -144,54 +138,6 @@ sub import {
     }
 } #import()
 
-#=head2 _line_mark_string
-#
-#Add a C<#line> directive to a string.  Usage:
-#
-#    my $str = _line_mark_string <<EOT ;
-#    $contents
-#    EOT
-#
-#or
-#
-#    my $str = _line_mark_string __FILE__, __LINE__, <<EOT ;
-#    $contents
-#    EOT
-#
-#In the first form, information from C<caller> will be used for the filename
-#and line number.
-#
-#The C<#line> directive will point to the line after the C<_line_mark_string>
-#invocation, i.e., the first line of <C$contents>.  Generally, C<$contents> will
-#be source code, although this is not required.
-#
-#C<$contents> must be defined, but can be empty.
-#
-#=cut
-
-sub _line_mark_string {
-    my ($contents, $filename, $line);
-    if(@_ == 1) {
-        $contents = $_[0];
-        (undef, $filename, $line) = caller;
-    } elsif(@_ == 3) {
-        ($filename, $line, $contents) = @_;
-    } else {
-        _croak "Invalid invocation";
-    }
-
-    _croak "Need text" unless defined $contents;
-    die "Couldn't get location information" unless $filename && $line;
-
-    $filename =~ s/"/-/g;
-    ++$line;
-
-    return <<EOT;
-#line $line "$filename"
-$contents
-EOT
-} #_line_mark_string()
-
 # Parse the argument list to the attribute handler
 sub _parse_arglist {
     my ($spec, $funcname) = @_;
@@ -199,52 +145,73 @@ sub _parse_arglist {
     say "Parsing args for $funcname: $spec";
 
     # TODO RESUME HERE - parse the parameter specification and return it
-    my $parsed = Sub::Multi::Tiny::SigParse($spec);
+    my $parsed = Sub::Multi::Tiny::SigParse::Parse($spec);
 } #_parse_arglist
 
 # Create the source for the M attribute handler for a given package
 sub _make_M {
     my $multi_package = shift;
-    my $code = "package $multi_package;\n";
+    my $code = _line_mark_string
+        "package $multi_package;\n";
+
+    # TODO See if making M an :ATTR(..., BEGIN) permits us to remove the
+    # requirement to list all the parameters in the `use S::M::T` line
+
     $code .= _line_mark_string <<'EOT';
 use Attribute::Handlers;
-use Data::Dumper;
+##use Data::Dumper;
 
 sub M :ATTR(CODE,RAWDATA) {
-    print "In ", __PACKAGE__, "::M: \n", Dumper(\@_);
+    ## print "In ", __PACKAGE__, "::M: \n", Dumper(\@_);
     my ($package, $symbol, $referent, $attr, $data, $phase,
         $filename, $linenum) = @_;
     my $funcname = "$package\::" . *{$symbol}{NAME};
-    print STDERR
-        ref($referent), " ",
-        $funcname, " ",
-        "($referent) ", "was just declared ",
-        "and ascribed the ${attr} attribute ",
-        "with data ($data)\n",
-        "in phase $phase\n",
-        "in file $filename at line $linenum\n";
+    ## print STDERR
+    ##     ref($referent), " ",
+    ##     $funcname, " ",
+    ##     "($referent) ", "was just declared ",
+    ##     "and ascribed the ${attr} attribute ",
+    ##     "with data ($data)\n",
+    ##     "in phase $phase\n",
+    ##     "in file $filename at line $linenum\n";
 EOT
 
     # Trap out-of-sequence calls.  Currently you can't create a new multisub
     # via eval at runtime.  TODO use UNITCHECK instead to permit doing so?
     $code .= _line_mark_string <<EOT;
-    die "CHECK already ran - please file a bug report"
-        if @{[__PACKAGE__]}\::_did_check_run();
+    die 'Dispatchers already created - please file a bug report'
+        if @{[__PACKAGE__]}\::_dispatchers_created();
+
+    my \$multi_def = \$_multisubs{'$multi_package'};
 EOT
 
     # Parse and validate the args
     $code .= _line_mark_string <<EOT;
     my \$args = @{[__PACKAGE__]}\::_parse_arglist(\$data, \$funcname);
-    # TODO add code to validate the args against {possible_params}
-EOT
-
-    # Save the implementation's coderef and the parsed args
-    # for use when making the dispatcher.
-    $code .= _line_mark_string <<EOT;
-    push \@{\$_multisubs{'$multi_package'}->{impls}}, [\$referent, \$args];
 EOT
 
     $code .= _line_mark_string <<'EOT';
+    foreach (@$args) {
+        my $name = $_->{name};
+        unless($multi_def->{possible_params}->{$name}) {
+            die "Argument $name is not listed on the 'use Sub::Multi::Tiny' line";
+        }
+    }
+EOT
+
+    # Save the implementation's info for use when making the dispatcher.
+    $code .= _line_mark_string <<'EOT';
+    my $info = {
+        code => $referent,
+        args => $args,
+
+        # For error messages
+        filename => $filename,
+        linenum => $linenum,
+        candidate_name => $funcname
+    };
+    push @{$multi_def->{impls}}, $info;
+
 } #M
 EOT
 
@@ -255,20 +222,19 @@ EOT
 # Create a dispatcher
 sub _make_dispatcher {
     my $hr = shift;
-    use Data::Dumper;
-    say "Making dispatcher for: ", Dumper($hr);
     die "No implementations given for $hr->{defined_in}"
         unless @{$hr->{impls}};
 
-#   my $custom_dispatcher = do {
-#       no strict 'refs';
-#       *{ $hr->{defined_in} . '::MakeDispatcher' }{CODE}
-#   };
+    my $custom_dispatcher = do {
+        no strict 'refs';
+        *{ $hr->{defined_in} . '::MakeDispatcher' }{CODE}
+    };
 
-#   return $custom_dispatcher->($hr) if defined $custom_dispatcher;
+    return $custom_dispatcher->($hr) if defined $custom_dispatcher;
 
-    die "Unimplemented";
-
+    # Default dispatcher
+    require Sub::Multi::Tiny::DefaultDispatcher;
+    return Sub::Multi::Tiny::DefaultDispatcher::MakeDispatcher($hr);
 } #_make_dispatcher
 
 1;

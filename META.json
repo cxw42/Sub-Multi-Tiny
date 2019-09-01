@@ -48,6 +48,7 @@
       "runtime" : {
          "requires" : {
             "Carp" : "0",
+            "Exporter" : "5.57",
             "Guard" : "1.023",
             "Import::Into" : "1.002005",
             "Text::Balanced" : "2.01",

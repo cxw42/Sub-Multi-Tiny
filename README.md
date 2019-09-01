@@ -6,21 +6,24 @@ Sub::Multi::Tiny - Multisubs/multimethods (multiple dispatch) yet another way!
 
     {
         package main::my_multi;     # We're making main::my_multi()
-        use Sub::Multi::Tiny qw($foo, $bar, @quux);     # All possible params
+        use Sub::Multi::Tiny qw($foo $bar);     # All possible params
 
-        sub first :M($foo, @quux) { # sub's name will be ignored
-            print "first\n";
+        sub first :M($foo, $bar) { # sub's name will be ignored
+            return "first";
         }
 
         sub second :M($foo) {
-            print "second\n";
+            return "second";
         }
 
     }
 
     # Back in package main, my_multi() is created just before the run phase.
-    my_multi("just a scalar");              # -> second
-    my_multi("a scalar", "and some more");  # -> first
+    say my_multi("a scalar", "and some more");  # -> "first"
+    say my_multi("just a scalar");              # -> "second"
+
+**Limitation:** At present, dispatch is solely by arity, and only one
+candidate can have each arity.  This limitation will be removed in the future.
 
 # DESCRIPTION
 

@@ -4,8 +4,10 @@ use strict;
 use warnings;
 use Test::More;
 
-use_ok('Sub::Multi::Tiny', ':nop');
-use_ok('Sub::Multi::Tiny::SigParse');
+BEGIN {     # Because otherwise we get a "Too late to run INIT block" warning
+    use_ok('Sub::Multi::Tiny', ':nop');
+    use_ok('Sub::Multi::Tiny::SigParse');
+}
 
 BAIL_OUT("Further tests rely on all modules compiling.")
     unless Test::Builder->new->is_passing;
