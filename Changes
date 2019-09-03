@@ -2,6 +2,8 @@ Revision history for Perl extension Sub-Multi-Tiny
 
 {{$NEXT}}
 
+    - Actually pass parameter values to the correct candidate!
+
 0.000001 2019-09-01T01:26:34Z
 
     - Initial release to CPAN.  Only supports dispatch by arity.
