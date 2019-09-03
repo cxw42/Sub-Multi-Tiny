@@ -7,7 +7,9 @@ use warnings;
 #use Data::Dumper;   # DEBUG
 
 use Guard;
-use Sub::Multi::Tiny::Util;
+use Sub::Multi::Tiny::Util qw(_hlog _line_mark_string);
+
+our $VERSION = '0.000002'; # TRIAL
 
 # Documentation {{{1
 
@@ -41,7 +43,8 @@ TODO expand.  For now, only dispatches based on arity.
 sub MakeDispatcher {
     my $hr = shift; # Has possible_params and impls arrayrefs
     my $code = '';
-    #say STDERR "Making default dispatcher for: ", Dumper($hr);
+    _hlog { require Data::Dumper;
+            "Making default dispatcher for: ", Data::Dumper->Dump([$hr], ['multisub']) };
 
     # Sort the candidates
     my %candidates_by_arity;
@@ -85,7 +88,7 @@ $restore
         }
 EOT
 
-    #say STDERR "Dispatcher:\n$code\n";
+    _hlog { "Dispatcher:\n$code\n" } 2;
     return eval $code;
 } #MakeDispatcher
 

@@ -5,8 +5,15 @@ use strict;
 use warnings;
 
 use Exporter qw(import);
-our @EXPORT;
-BEGIN { @EXPORT = qw(_croak _carp _line_mark_string) }
+use vars::i [
+    '$VERBOSE' => 0,    # Set this to a positive int for extra output on STDERR
+    '@EXPORT' => [],
+    '@EXPORT_OK' => [qw(_carp _croak _hlog _line_mark_string *VERBOSE)],
+];
+use vars::i '%EXPORT_TAGS' => { all => [@EXPORT, @EXPORT_OK] };
+
+our $VERSION = '0.000002'; # TRIAL
+
 
 # Documentation {{{1
 
@@ -16,7 +23,14 @@ Sub::Multi::Tiny::Util - Internal utilities for Sub::Multi::Tiny
 
 =head1 SYNOPSIS
 
-No user-serviceable parts inside.  See L<Sub::Multi::Tiny>.
+Used by L<Sub::Multi::Tiny>.
+
+=head1 VARIABLES
+
+=head2 $VERBOSE
+
+Set this truthy for extra debug output.  Automatically set to C<1> if the
+environment variable C<SUB_MULTI_TINY_VERBOSE> has a truthy value.
 
 =head1 FUNCTIONS
 
@@ -93,6 +107,45 @@ sub _line_mark_string {
 $contents
 EOT
 } #_line_mark_string()
+
+=head2 _hlog
+
+Log information if L</$VERBOSE> is set.  Usage:
+
+    _hlog { <list of things to log> } [optional min verbosity level (default 1)];
+
+The items in the list are joined by C<' '> on output, and a C<'\n'> is added.
+Each line is prefixed with C<'# '> for the benefit of test runs.
+
+The list is in C<{}> so that it won't be evaluated if logging is turned off.
+It is a full block, so you can run arbitrary code to decide what to log.
+If the block returns an empty list, C<_hlog> will not produce any output.
+However, if the block returns at least one element, C<_hlog> will produce at
+least a C<'# '>.
+
+The message will be output only if L</$VERBOSE> is at least the given minimum
+verbosity level (1 by default).
+
+If C<< $VERBOSE > 2 >>, the filename and line from which C<_hlog> was called
+will also be printed.
+
+=cut
+
+sub _hlog (&;$) {
+    return unless $VERBOSE >= ($_[1] // 1);
+
+    my @log = &{$_[0]}();
+    return unless @log;
+
+    chomp $log[$#log] if $log[$#log];
+    # TODO add an option to number the lines of the output
+    my $msg = (join(' ', @log)) =~ s/^/# /gmr;
+    if($VERBOSE>2) {
+        my ($package, $filename, $line) = caller;
+        $msg .= " (at $filename:$line)";
+    }
+    say STDERR $msg;
+} #_hlog()
 
 1;
 __END__

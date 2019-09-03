@@ -15,13 +15,11 @@ use subs ();
 use vars ();
 use warnings;
 
-#use Data::Dumper;   #DEBUG
-
 use Import::Into;
 use Sub::Multi::Tiny::SigParse;
-use Sub::Multi::Tiny::Util;
+use Sub::Multi::Tiny::Util ':all';
 
-our $VERSION = "0.000001";
+our $VERSION = '0.000002'; # TRIAL
 
 # Documentation {{{1
 
@@ -38,11 +36,11 @@ Sub::Multi::Tiny - Multisubs/multimethods (multiple dispatch) yet another way!
         use Sub::Multi::Tiny qw($foo $bar);     # All possible params
 
         sub first :M($foo, $bar) { # sub's name will be ignored
-            return "first";
+            return $foo ** $bar;
         }
 
         sub second :M($foo) {
-            return "second";
+            return $foo + 42;
         }
 
     }
@@ -81,9 +79,8 @@ sub _dispatchers_created { !!$_dispatchers_created; }
 # way compilation failures prevent this code from running.
 
 INIT {
-    say "In INIT block";
+    _hlog { __PACKAGE__, "in INIT block" };
     $_dispatchers_created = 1;
-    #say STDERR Dumper(\%_multisubs);
     while(my ($multisub_fullname, $hr) = each(%_multisubs)) {
         my $dispatcher = _make_dispatcher($hr)
             or die "Could not create dispatcher for $multisub_fullname\()";
@@ -96,12 +93,15 @@ INIT {
 sub import {
     my $multi_package = caller;     # The package that defines the multisub
     my $my_package = shift;         # The package we are
+
+    $VERBOSE = 1 if $ENV{SUB_MULTI_TINY_VERBOSE};
+
     if(@_ && $_[0] eq ':nop') {
-        say STDERR '# ' . __PACKAGE__ . ':nop => Taking no action';
+        _hlog { __PACKAGE__ . ':nop => Taking no action' } 0;    # Always
         return;
     }
 
-    say "Target $multi_package package $my_package";
+    _hlog { "Target $multi_package package $my_package" };
     my ($target_package, $subname) = ($multi_package =~ m{^(.+?)::([^:]+)$});
         # $target_package is the package that will be able to call the multisub
     _croak "Can't parse package name ${multi_package} into <target>::<name>"
@@ -116,7 +116,7 @@ sub import {
     vars->import::into($multi_package, @possible_params);
 
     # Make a stub that we will redefine later
-    say "Making $multi_package\()";
+    _hlog { "Making $multi_package\()" } ;
     subs->import::into($target_package, $subname);
     # TODO add stub for callsame/nextwith/...
 
@@ -132,7 +132,7 @@ sub import {
     # Set up the :M attribute in $multi_package if it doesn't
     # exist yet.
     unless(eval { no strict 'refs'; defined &{$multi_package . '::M'} }) {
-        say "Making $multi_package attr M";
+        _hlog { "Making $multi_package attr M" } 2;
         eval(_make_M($multi_package));
         die $@ if $@;
     }
@@ -142,7 +142,7 @@ sub import {
 sub _parse_arglist {
     my ($spec, $funcname) = @_;
     _croak "Need a parameter spec for $funcname" unless $spec;
-    say "Parsing args for $funcname: $spec";
+    _hlog { "Parsing args for $funcname: $spec" } 2;
 
     # TODO RESUME HERE - parse the parameter specification and return it
     my $parsed = Sub::Multi::Tiny::SigParse::Parse($spec);
@@ -159,21 +159,25 @@ sub _make_M {
 
     $code .= _line_mark_string <<'EOT';
 use Attribute::Handlers;
+use Sub::Multi::Tiny::Util qw(_hlog);
 ##use Data::Dumper;
 
 sub M :ATTR(CODE,RAWDATA) {
-    ## print "In ", __PACKAGE__, "::M: \n", Dumper(\@_);
+    _hlog { require Data::Dumper;
+            'In ', __PACKAGE__, "::M: \n",
+            Data::Dumper->Dump([\@_], ['attr_args']) } 2;
     my ($package, $symbol, $referent, $attr, $data, $phase,
         $filename, $linenum) = @_;
     my $funcname = "$package\::" . *{$symbol}{NAME};
-    ## print STDERR
-    ##     ref($referent), " ",
-    ##     $funcname, " ",
-    ##     "($referent) ", "was just declared ",
-    ##     "and ascribed the ${attr} attribute ",
-    ##     "with data ($data)\n",
-    ##     "in phase $phase\n",
-    ##     "in file $filename at line $linenum\n";
+    _hlog {     # Code from Attribute::Handlers, license perl_5
+        ref($referent), " ",
+        $funcname, " ",
+        "($referent) ", "was just declared ",
+        "and ascribed the ${attr} attribute ",
+        "with data ($data)\n",
+        "in phase $phase\n",
+        "in file $filename at line $linenum\n"
+    } 2;
 EOT
 
     # Trap out-of-sequence calls.  Currently you can't create a new multisub
@@ -215,7 +219,7 @@ EOT
 } #M
 EOT
 
-    #print STDERR "M code:\n$code\n";
+    _hlog { "M code:\n$code\n" } 2;
     return $code;
 } #_make_M
 
@@ -240,6 +244,15 @@ sub _make_dispatcher {
 1;
 # Rest of the documentation {{{1
 __END__
+
+=head1 DEBUGGING
+
+For extra debug output, set L<Sub::Multi::Tiny/$VERBOSE> to a positive integer.
+This has to be set at compile time to have any effect.  For example, before
+creating any multisubs, do:
+
+    use Sub::Multi::Tiny::Util '*VERBOSE';
+    BEGIN { $VERBOSE = 2; }
 
 =head1 RATIONALE / SEE ALSO
 
