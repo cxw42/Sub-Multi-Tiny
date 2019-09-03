@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/cxw42/Sub-Multi-Tiny.svg?branch=master)](https://travis-ci.org/cxw42/Sub-Multi-Tiny)
 # NAME
 
 Sub::Multi::Tiny - Multisubs/multimethods (multiple dispatch) yet another way!
@@ -9,11 +10,11 @@ Sub::Multi::Tiny - Multisubs/multimethods (multiple dispatch) yet another way!
         use Sub::Multi::Tiny qw($foo $bar);     # All possible params
 
         sub first :M($foo, $bar) { # sub's name will be ignored
-            return "first";
+            return $foo ** $bar;
         }
 
         sub second :M($foo) {
-            return "second";
+            return $foo + 42;
         }
 
     }
@@ -32,6 +33,15 @@ aka multiple-dispatch subroutines.
 
 TODO explain: if sub `MakeDispatcher()` exists in the package, it will
 be called to create the dispatcher.
+
+# DEBUGGING
+
+For extra debug output, set ["$VERBOSE" in Sub::Multi::Tiny](https://metacpan.org/pod/Sub::Multi::Tiny#VERBOSE) to a positive integer.
+This has to be set at compile time to have any effect.  For example, before
+creating any multisubs, do:
+
+    use Sub::Multi::Tiny::Util '*VERBOSE';
+    BEGIN { $VERBOSE = 2; }
 
 # RATIONALE / SEE ALSO
 

@@ -3,8 +3,8 @@ use strict;
 use warnings;
 use Test::More;
 
-use Sub::Multi::Tiny::Util '*VERBOSE';
-BEGIN { $VERBOSE = 2; }
+#use Sub::Multi::Tiny::Util '*VERBOSE';
+#BEGIN { $VERBOSE = 2; }
 
 {
     package main::my_multi;     # We're making main::my_multi()
@@ -19,9 +19,6 @@ BEGIN { $VERBOSE = 2; }
     }
 
 }
-
-#use Data::Dumper;
-#diag Dumper(\%main::);
 
 ok eval { \&main::my_multi }, 'my_multi() exists';
 
