@@ -32,6 +32,34 @@ See L<Sub::Multi::Tiny> for more.  This module does not export any symbols
 
 # }}}1
 
+# Make a sub to copy from @_ into package variables.
+sub _make_copier {
+    my ($defined_in, $impl) = @_;
+    use Data::Dumper::Compact qw(ddc);
+    say '_make_copier: ', ddc \@_;
+
+    my $code = _line_mark_string <<'EOT';
+sub {
+    (
+EOT
+
+    $code .= _line_mark_string
+        join ",\n",
+            map {
+                my ($sigil, $name) = $_->{name} =~ m/^(.)(.+)$/;
+                "        ${sigil}$defined_in\::${name}"
+            } #foreach arg
+                @{$impl->{args}};
+
+    $code .= _line_mark_string <<'EOT';
+    ) = @_;
+} #copier
+EOT
+
+    _hlog { "Copier for $impl->{candidate_name}\():\n", $code } 2;
+    return eval $code;
+} #_make_copier
+
 =head2 MakeDispatcher
 
 Make the default dispatcher for the given multi.  See L</SYNOPSIS>.
@@ -47,21 +75,25 @@ sub MakeDispatcher {
             "Making default dispatcher for: ", Data::Dumper->Dump([$hr], ['multisub']) };
 
     # Sort the candidates
-    my %candidates_by_arity;
-    foreach(@{$hr->{impls}}) {
-        my $arity = @{$_->{args}};
+    my (%candidates_by_arity, %copiers_by_arity);   # TODO make this cleaner
+    foreach my $impl (@{$hr->{impls}}) {
+        my $arity = @{$impl->{args}};
         die "I can't yet distinguish between candidates of the same arity"
             if exists $candidates_by_arity{$arity};
-        $candidates_by_arity{$arity} = $_->{code};
+        $candidates_by_arity{$arity} = $impl->{code};
+        $copiers_by_arity{$arity} =
+            _make_copier($hr->{defined_in}, $impl);
     }
 
     # Make the dispatcher
     $code .= _line_mark_string <<EOT;
         sub {
             # Find the candidate
-            my \$candidate = \$candidates_by_arity{scalar \@_};
+            my \$arity = scalar \@_;
+            my \$candidate = \$candidates_by_arity{\$arity};
             die "No candidate found for $hr->{defined_in}\() with arity " .
                 (scalar \@_) unless \$candidate;
+            my \$copier = \$copiers_by_arity{\$arity};
 
             # Save the present values of the parameters
 EOT
@@ -80,15 +112,24 @@ EOT
             my \$guard = Guard::guard {
 $restore
             }; #End of guard
-
-            \@_ = (\$guard);    # Pass the guard so the parameters will be
-                                # reset once \$candidate finishes running.
-            # Invoke the selected candidate
-            goto &\$candidate;
-        }
 EOT
 
-    _hlog { "Dispatcher:\n$code\n" } 2;
+    $code .= _line_mark_string <<'EOT';
+
+            # Copy the parameters into the variables the candidate
+            # will access them from
+            &$copier;   # $copier gets @_ automatically
+
+            # Pass the guard so the parameters will be reset once \$candidate
+            # finishes running.
+            @_ = ($guard);
+
+            # Invoke the selected candidate
+            goto &$candidate;
+        } #dispatcher
+EOT
+
+    _hlog { "\nDispatcher for $hr->{defined_in}\():\n$code\n" } 2;
     return eval $code;
 } #MakeDispatcher
 
