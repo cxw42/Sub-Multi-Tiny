@@ -2,8 +2,6 @@ use 5.010001;
 use strict;
 use warnings;
 
-use Data::Dumper; #DEBUG
-
 use Sub::Multi::Tiny::SigParse;
 use Test::Fatal;
 use Test::More;

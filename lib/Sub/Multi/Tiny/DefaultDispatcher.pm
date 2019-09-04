@@ -35,19 +35,20 @@ See L<Sub::Multi::Tiny> for more.  This module does not export any symbols
 # Make a sub to copy from @_ into package variables.
 sub _make_copier {
     my ($defined_in, $impl) = @_;
-    use Data::Dumper::Compact qw(ddc);
-    say '_make_copier: ', ddc \@_;
+    _hlog { require Data::Dumper;
+        Data::Dumper->Dump([\@_],['_make_copier']) } 2;
 
     my $code = _line_mark_string <<'EOT';
 sub {
     (
 EOT
 
-    $code .= _line_mark_string
+    $code .=
         join ",\n",
             map {
                 my ($sigil, $name) = $_->{name} =~ m/^(.)(.+)$/;
-                "        ${sigil}$defined_in\::${name}"
+                _line_mark_string
+                    "        ${sigil}$defined_in\::${name}"
             } #foreach arg
                 @{$impl->{args}};
 

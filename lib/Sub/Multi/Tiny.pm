@@ -46,8 +46,8 @@ Sub::Multi::Tiny - Multisubs/multimethods (multiple dispatch) yet another way!
     }
 
     # Back in package main, my_multi() is created just before the run phase.
-    say my_multi("a scalar", "and some more");  # -> "first"
-    say my_multi("just a scalar");              # -> "second"
+    say my_multi(2, 5);     # -> 32
+    say my_multi(1295);     # -> 1337
 
 B<Limitation:> At present, dispatch is solely by arity, and only one
 candidate can have each arity.  This limitation will be removed in the future.
@@ -57,8 +57,7 @@ candidate can have each arity.  This limitation will be removed in the future.
 Sub::Multi::Tiny is a library for making multisubs, aka multimethods,
 aka multiple-dispatch subroutines.
 
-TODO explain: if sub C<MakeDispatcher()> exists in the package, it will
-be called to create the dispatcher.
+=head1 FUNCTIONS
 
 =cut
 
@@ -74,9 +73,9 @@ my $_dispatchers_created;
 # Accessor
 sub _dispatchers_created { !!$_dispatchers_created; }
 
-# INIT Fill in the dispatchers for any multisubs we've created.
-# Note: attributes are applied at CHECK time.  We use INIT since that
-# way compilation failures prevent this code from running.
+# INIT: Fill in the dispatchers for any multisubs we've created.
+# Note: attributes are applied at CHECK time, before this.
+# We use INIT so that compilation failures will prevent this code from running.
 
 INIT {
     _hlog { __PACKAGE__, "in INIT block" };
@@ -89,6 +88,15 @@ INIT {
         die "Could not assign dispatcher for $multisub_fullname\:\n$@" if $@;
     } #foreach multisub
 } #CHECK
+
+=head2 import
+
+Sets up the package that uses it to define a multisub.  The parameters
+are all the parameter variables that the multisubs will use.  C<import>
+creates these as package variables so that they can be used unqualified
+in the multisub implementations.
+
+=cut
 
 sub import {
     my $multi_package = caller;     # The package that defines the multisub
@@ -144,8 +152,7 @@ sub _parse_arglist {
     _croak "Need a parameter spec for $funcname" unless $spec;
     _hlog { "Parsing args for $funcname: $spec" } 2;
 
-    # TODO RESUME HERE - parse the parameter specification and return it
-    my $parsed = Sub::Multi::Tiny::SigParse::Parse($spec);
+    return Sub::Multi::Tiny::SigParse::Parse($spec);
 } #_parse_arglist
 
 # Create the source for the M attribute handler for a given package
@@ -245,26 +252,79 @@ sub _make_dispatcher {
 # Rest of the documentation {{{1
 __END__
 
+=head1 CUSTOM DISPATCH
+
+This module includes a default dispatcher (implemented in
+L<Sub::Multi::Tiny::DefaultDispatcher>.  To use a different dispatcher,
+define or import a sub C<MakeDispatcher()> into the package before
+compilation ends.  That sub will be called to create the dispatcher.
+For example:
+
+    {
+        package main::foo;
+        use Sub::Multi::Tiny;
+        sub MakeDispatcher { return sub { ... } }
+    }
+
+or
+
+    {
+        package main::foo;
+        use Sub::Multi::Tiny;
+        use APackageThatImportsMakeDispatcherIntoMainFoo;
+    }
+
+=cut
+
 =head1 DEBUGGING
 
-For extra debug output, set L<Sub::Multi::Tiny/$VERBOSE> to a positive integer.
-This has to be set at compile time to have any effect.  For example, before
-creating any multisubs, do:
+For extra debug output, set L<Sub::Multi::Tiny::Util/$VERBOSE> to a positive
+integer.  This has to be set at compile time to have any effect.  For example,
+before creating any multisubs, do:
 
     use Sub::Multi::Tiny::Util '*VERBOSE';
     BEGIN { $VERBOSE = 2; }
 
-=head1 RATIONALE / SEE ALSO
+=head1 RATIONALE
 
-TODO explain why yet another module!
+=over
+
+=item *
+
+To be able to use multisubs in pre-5.14 Perls with only built-in
+language facilities.  This will help me make my own modules backward
+compatible with those Perls.
+
+=item *
+
+To learn how it's done! :)
+
+=back
+
+=head1 SEE ALSO
+
+I looked at these but decided not to use them for the following reasons:
 
 =over
 
 =item L<Class::Multimethods>
 
+I wanted a syntax that used normal C<sub> definitions as much as possible.
+Also, I was a bit concerned by LPALMER's experience that it "does what you
+don't want sometimes without saying a word"
+(L<Class::Multimethods::Pure/Semantics>).
+
+Other than that, I think this looks pretty decent (but haven't tried it).
+
 =item L<Class::Multimethods::Pure>
 
+Same desire for C<sub> syntax.  Additionally, the last update was in 2007,
+and the maintainer hasn't uploaded anything since.  Other than that, I think
+this also looks like a decent option (but haven't tried it).
+
 =item L<Dios>
+
+This is a full object system, which I do not need in my use case.
 
 =item L<Logic>
 
@@ -272,6 +332,8 @@ This one is fairly clean, but uses a source filter.  I have not had much
 experience with source filters, so am reluctant.
 
 =item L<Kavorka::Manual::MultiSubs> (and L<Moops>)
+
+Requires Perl 5.14+.
 
 =item L<MooseX::MultiMethods>
 
@@ -282,6 +344,10 @@ I am not ready to move to full L<Moose>!
 As above.
 
 =item L<Sub::Multi>
+
+The original inspiration for this module, whence this module's name.
+C<Sub::Multi> uses coderefs, and I wanted a syntax that used normal
+C<sub> definitions as much as possible.
 
 =item L<Sub::SmartMatch>
 

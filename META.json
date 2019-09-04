@@ -28,6 +28,7 @@
    "prereqs" : {
       "build" : {
          "requires" : {
+            "Cwd" : "0",
             "Parse::Yapp" : "0"
          }
       },
@@ -50,6 +51,7 @@
             "Carp" : "0",
             "Data::Dumper" : "0",
             "Exporter" : "5.57",
+            "File::Spec" : "0",
             "Guard" : "1.023",
             "Import::Into" : "1.002005",
             "Text::Balanced" : "2.01",
@@ -64,6 +66,8 @@
       },
       "test" : {
          "requires" : {
+            "Config" : "0",
+            "IPC::Run3" : "0.047",
             "Test::Fatal" : "0.014",
             "Test::More" : "0.98"
          }
