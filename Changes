@@ -2,6 +2,12 @@ Revision history for Perl extension Sub-Multi-Tiny
 
 {{$NEXT}}
 
+0.000003 2019-09-04T14:21:27Z
+
+    - Updated documentation
+    - Added tests
+    - Removed undeclared dependency (#1)
+
 0.000002 2019-09-03T01:00:33Z
 
     - Actually pass parameter values to the correct candidate!

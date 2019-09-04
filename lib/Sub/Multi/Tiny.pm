@@ -19,7 +19,7 @@ use Import::Into;
 use Sub::Multi::Tiny::SigParse;
 use Sub::Multi::Tiny::Util ':all';
 
-our $VERSION = '0.000002'; # TRIAL
+our $VERSION = '0.000003'; # TRIAL
 
 # Documentation {{{1
 
