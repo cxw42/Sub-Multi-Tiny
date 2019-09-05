@@ -139,7 +139,7 @@ sub _hlog (&;$) {
 
     chomp $log[$#log] if $log[$#log];
     # TODO add an option to number the lines of the output
-    my $msg = (join(' ', @log)) =~ s/^/# /gmr;
+    (my $msg = join(' ', @log)) =~ s/^/# /gm;
     if($VERBOSE>2) {
         my ($package, $filename, $line) = caller;
         $msg .= " (at $filename:$line)";
