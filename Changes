@@ -2,6 +2,8 @@ Revision history for Perl extension Sub-Multi-Tiny
 
 {{$NEXT}}
 
+0.000004 2019-09-05T02:14:14Z
+
     - Support recursion to the dispatcher (#4)
     - Add documentation
     - Relax the minimum Perl version to 5.006
