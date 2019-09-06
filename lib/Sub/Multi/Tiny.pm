@@ -21,7 +21,7 @@ use Import::Into;
 use Sub::Multi::Tiny::SigParse;
 use Sub::Multi::Tiny::Util ':all';
 
-our $VERSION = '0.000004'; # TRIAL
+our $VERSION = '0.000005'; # TRIAL
 
 # Documentation {{{1
 
