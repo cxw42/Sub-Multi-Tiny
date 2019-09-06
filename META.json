@@ -26,15 +26,13 @@
       ]
    },
    "prereqs" : {
-      "build" : {
-         "requires" : {
-            "Cwd" : "0",
-            "Parse::Yapp" : "0"
-         }
-      },
       "configure" : {
          "requires" : {
-            "Module::Build::Tiny" : "0.035"
+            "Cwd" : "0",
+            "File::Spec" : "0",
+            "Module::Build::Tiny" : "0.035",
+            "Parse::Yapp" : "0",
+            "Parse::Yapp::Driver" : "0"
          }
       },
       "develop" : {
@@ -48,10 +46,10 @@
       },
       "runtime" : {
          "requires" : {
+            "Attribute::Handlers" : "0.79",
             "Carp" : "0",
             "Data::Dumper" : "0",
             "Exporter" : "5.57",
-            "File::Spec" : "0",
             "Guard" : "1.023",
             "Import::Into" : "1.002005",
             "Text::Balanced" : "2.01",
@@ -65,7 +63,11 @@
          }
       },
       "test" : {
+         "recommends" : {
+            "Perl::PrereqScanner" : "1.023"
+         },
          "requires" : {
+            "CPAN::Meta" : "2.150008",
             "Config" : "0",
             "IPC::Run3" : "0.047",
             "Test::Fatal" : "0.014",

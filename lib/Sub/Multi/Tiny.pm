@@ -15,6 +15,8 @@ use subs ();
 use vars ();
 use warnings;
 
+require Attribute::Handlers;    # Listed here so automated tools see it
+
 use Import::Into;
 use Sub::Multi::Tiny::SigParse;
 use Sub::Multi::Tiny::Util ':all';
