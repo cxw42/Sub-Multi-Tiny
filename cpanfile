@@ -6,6 +6,7 @@ requires 'Attribute::Handlers', '0.79';
 requires 'attributes';
 requires 'Carp';
 requires 'Data::Dumper';
+requires 'enum', '1.08';
 requires 'Exporter', '5.57';
 requires 'Guard', '1.023';
 requires 'Import::Into', '1.002005';
@@ -31,6 +32,7 @@ on 'configure' => sub {
 on 'test' => sub {
     requires 'Config';
     requires 'CPAN::Meta', '2.150008';
+    requires 'Data::PowerSet', '0.05';
     requires 'IPC::Run3', '0.047';
     requires 'Test::Fatal', '0.014';
     requires 'Test::More', '0.98';

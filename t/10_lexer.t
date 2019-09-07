@@ -89,14 +89,23 @@ CheckSuccess("\t,    ", [[SEPAR => 0]]);
 CheckSuccess("  ,\t", [[SEPAR => 0]]);
 CheckSuccess(" \n  , \n\t", [[SEPAR => 0]]);
 
-# Names
-CheckSuccess('$foo',[[NAME=>'$foo']]);
-CheckSuccess('   $foo',[[NAME=>'$foo']]);
-CheckSuccess('$foo   ',[[NAME=>'$foo']]);
-CheckSuccess('@foo',[[NAME=>'@foo']]);
-CheckSuccess('%foo',[[NAME=>'%foo']]);
-CheckSuccess('&foo',[[NAME=>'&foo']]);
-CheckSuccess('*foo',[[NAME=>'*foo']]);
+# Positional parameters
+CheckSuccess('$foo',[[POS=>'$foo']]);
+CheckSuccess('   $foo',[[POS=>'$foo']]);
+CheckSuccess('$foo   ',[[POS=>'$foo']]);
+CheckSuccess('@foo',[[POS=>'@foo']]);
+CheckSuccess('%foo',[[POS=>'%foo']]);
+CheckSuccess('&foo',[[POS=>'&foo']]);
+CheckSuccess('*foo',[[POS=>'*foo']]);
+
+# Named parameters
+CheckSuccess(':$foo',[[NAMED=>'$foo']]);
+CheckSuccess('   :$foo',[[NAMED=>'$foo']]);
+CheckSuccess(':$foo   ',[[NAMED=>'$foo']]);
+CheckSuccess(':@foo',[[NAMED=>'@foo']]);
+CheckSuccess(':%foo',[[NAMED=>'%foo']]);
+CheckSuccess(':&foo',[[NAMED=>'&foo']]);
+CheckSuccess(':*foo',[[NAMED=>'*foo']]);
 
 # where {} clauses
 CheckSuccess('where {1}', [[WHERE=>'{1}']]);
@@ -132,7 +141,7 @@ CheckSuccess('Int Array[Foo]  ',[[TYPE=>'Int'], [TYPE=>'Array[Foo]']]);
 # A random big test
 CheckSuccess('   {x} $foo,    where { $foo > 1 }, 42[bar] {long one},', [
     [ TYPE => '{x}' ],
-    [ NAME => '$foo' ],
+    [ POS => '$foo' ],
     [ SEPAR => 0 ],
     [ WHERE => '{ $foo > 1 }' ],
     [ SEPAR => 0 ],

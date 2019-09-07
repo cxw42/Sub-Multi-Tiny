@@ -234,10 +234,11 @@ EOT
 
     # Parse and validate the args
     $code .= _line_mark_string <<EOT;
-    my \$args = @{[__PACKAGE__]}\::_parse_arglist(\$data, \$funcname);
+    my \$hrSig = @{[__PACKAGE__]}\::_parse_arglist(\$data, \$funcname);
 EOT
 
     $code .= _line_mark_string <<'EOT';
+    my $args = $hrSig->{parms};
     foreach (@$args) {
         my $name = $_->{name};
         unless($multi_def->{possible_params}->{$name}) {

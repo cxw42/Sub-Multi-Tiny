@@ -13,6 +13,27 @@ use warnings;
 
 use Text::Balanced qw(extract_codeblock);
 
+# Types of constraints we've seen - bit offsets
+use enum
+    # Flags set by the parser
+    'SEEN_WHERE',       # `where` clause
+    'SEEN_TYPE',        # Type constraint
+    'SEEN_POS',         # Positional argument
+    'SEEN_NAMED',       # Named argument
+    # future: SEEN_LITERAL for signatures holding literal values
+    # instead of name matches.
+
+    # Flags set by later processing
+    'HAS_MULTIPLE_ARITIES',     # Set if there are at least two
+                                # different positional arities in a
+                                # set of impls
+;
+
+# Set bits in YYData->{SEEN}
+sub _seen {
+    vec($_[0]->YYData->{SEEN}, $_[$_], 1) = 1 foreach 1..$#_;
+}
+
 # }}}1
 # Documentation {{{1
 
@@ -42,14 +63,19 @@ And then:
 #############################################################################
 # Token and precedence definitions
 
+# TODO: slurpies (prefix *, +); trailing ?, !
+
 # Separator (usually a comma)
 %token SEPAR
 
 # Type before a variable name
 %token TYPE
 
-# Name with a sigil.  TODO slurpies.
-%token NAME
+# Positional parameter (name with a sigil).
+%token POS
+
+# Named parameter
+%token NAMED
 
 # "where BLOCK"
 %token WHERE
@@ -68,10 +94,37 @@ signature:
     ;
 
 parameter:
-        NAME                { +{name=>$_[1]} }
-    |   NAME WHERE          { +{name=>$_[1], where=>$_[2]} }
-    |   TYPE NAME           { +{name=>$_[2],               type => $_[1]} }
-    |   TYPE NAME WHERE     { +{name=>$_[2], where=>$_[3], type => $_[1]} }
+        positional
+    |   named
+    ;
+
+positional:
+        POS                 {   _seen $_[0], SEEN_POS;
+                                +{name=>$_[1]}                              }
+
+    |   POS WHERE           {   _seen $_[0], SEEN_POS, SEEN_WHERE;
+                                +{name=>$_[1], where=>$_[2]}                }
+
+    |   TYPE POS            {   _seen $_[0], SEEN_TYPE, SEEN_POS;
+                                +{name=>$_[2],               type => $_[1]} }
+
+    |   TYPE POS WHERE      {   _seen $_[0], SEEN_TYPE, SEEN_POS, SEEN_WHERE;
+                                +{name=>$_[2], where=>$_[3], type => $_[1]} }
+    ;
+
+named:
+        NAMED               {   _seen $_[0], SEEN_NAMED;
+                                +{name=>$_[1], named=>1}                    }
+
+    |   NAMED WHERE         {   _seen $_[0], SEEN_NAMED, SEEN_WHERE;
+                                +{name=>$_[1], named=>1, where=>$_[2]}      }
+
+    |   TYPE NAMED          {   _seen $_[0], SEEN_TYPE, SEEN_NAMED;
+                                +{name=>$_[2], named=>1, type => $_[1]}     }
+
+    |   TYPE NAMED WHERE    {   _seen $_[0], SEEN_TYPE, SEEN_NAMED, SEEN_WHERE;
+                                +{name=>$_[2], named=>1, where=>$_[3],
+                                    type => $_[1]}                          }
     ;
 
 %%
@@ -93,7 +146,9 @@ sub _next_token {
 
     $$text =~ m/\G,/gc and return (SEPAR => 0); # 0 is a dummy value
 
-    $$text =~ m/\G([\$\@\%\&\*]\w+)\b/gc and return (NAME => $1) ;
+    $$text =~ m/\G([\$\@\%\&\*]\w+)\b/gc and return (POS => $1) ;
+
+    $$text =~ m/\G:([\$\@\%\&\*]\w+)\b/gc and return (NAMED => $1) ;
 
     if($$text =~ m/\Gwhere\s*\{/gci) {
         pos($$text) -= 1;    # Get the lbrace back
@@ -179,12 +234,16 @@ sub Parse {
     # Used in reporting errors.
     $hrData->{CURR_TOK_POS} = -1;
 
-    my $hrRetval = $parser->YYParse(yylex => \&_next_token,
+    # SEEN: bit flags for which types of things we've seen
+    $hrData->{SEEN} = '';
+
+    my $lrParms = $parser->YYParse(yylex => \&_next_token,
         yyerror => \&_report_error,
         (@_ ? (yydebug => $_[0]) : ()),
     );
+    my %retval = (seen => $hrData->{SEEN}, parms => $lrParms);
 
-    return $hrRetval;
+    return \%retval;
 } #Parse()
 
 # }}}1
