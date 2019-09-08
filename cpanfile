@@ -11,7 +11,7 @@ requires 'Exporter', '5.57';
 requires 'Guard', '1.023';
 requires 'Import::Into', '1.002005';
 requires 'Text::Balanced', '2.01';
-requires 'Type::Params', '1.004004';    # for TypeParamsDispatcher
+requires 'Type::Params', '1.004004';    # for Dispatcher::TypeParams
 requires 'strict';
 requires 'subs';
 requires 'vars';

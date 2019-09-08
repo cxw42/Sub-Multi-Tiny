@@ -1,4 +1,4 @@
-package Sub::Multi::Tiny::TypeParamsDispatcher;
+package Sub::Multi::Tiny::Dispatcher::Default;
 
 use 5.006;
 use strict;
@@ -8,7 +8,6 @@ use warnings;
 
 use Guard;
 use Sub::Multi::Tiny::Util qw(_hlog _line_mark_string);
-use Type::Params;
 
 our $VERSION = '0.000005'; # TRIAL
 
@@ -16,24 +15,18 @@ our $VERSION = '0.000005'; # TRIAL
 
 =head1 NAME
 
-Sub::Multi::Tiny::TypeParamsDispatcher - Dispatcher-maker using Type::Params for Sub::Multi::Tiny
+Sub::Multi::Tiny::Dispatcher::Default - Default dispatcher-maker for Sub::Multi::Tiny
 
 =head1 SYNOPSIS
 
-    # In a multisub
-    require Sub::Multi::Tiny qw($param D:TypeParams);   # in a multisub
-
-    # Internals of Sub::Multi::Tiny
-    use Type::Params;
+    require Sub::Multi::Tiny::Dispatcher::Default;
     my $dispatcher_coderef =
-        Sub::Multi::Tiny::TypeParamsDispatcher::MakeDispatcher({impls=>[]...});
+        Sub::Multi::Tiny::Dispatcher::Default::MakeDispatcher({impls=>[]...});
 
-This module dispatches to any function that can be distinguished
-by the C<multisig> function in L<Type::Params>.
-See L<Type::Params/MULTIPLE SIGNATURES>.
+See L<Sub::Multi::Tiny> for more.  This module does not export any symbols
+(or even have the capability to do so!).
 
-See L<Sub::Multi::Tiny> for more about the usage of this module.
-This module does not export any symbols.
+This dispatcher currently only dispatches by arity.
 
 =head1 FUNCTIONS
 
@@ -82,10 +75,7 @@ sub MakeDispatcher {
     my $hr = shift; # Has possible_params and impls arrayrefs
     my $code = '';
     _hlog { require Data::Dumper;
-            "Making Type::Params dispatcher for: ",
-                Data::Dumper->Dump([$hr], ['multisub']) };
-
-=for comment
+            "Making default dispatcher for: ", Data::Dumper->Dump([$hr], ['multisub']) };
 
     # Sort the candidates
     my (%candidates_by_arity, %copiers_by_arity);   # TODO make this cleaner
@@ -144,10 +134,6 @@ EOT
 
     _hlog { "\nDispatcher for $hr->{defined_in}\():\n$code\n" } 2;
     return eval $code;
-
-=cut
-
-    die 'Unimplemented';
 } #MakeDispatcher
 
 1;

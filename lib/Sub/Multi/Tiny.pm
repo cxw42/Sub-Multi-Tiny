@@ -145,7 +145,8 @@ sub import {
     _croak "Can't redefine multi sub $multi_package\()"
         if exists $_multisubs{$multi_package};
 
-    # Create the vars - they will be accessed as package variables
+    # Create the vars - they will be accessed as package variables.
+    # TODO: parameters of the form D:<foo> import dispatcher <foo>.
     my @possible_params = @_;
     _croak "Please list the sub parameters" unless @possible_params;
     vars->import::into($multi_package, @possible_params);
@@ -321,8 +322,8 @@ sub _make_dispatcher {
     return $custom_dispatcher->($hr) if defined $custom_dispatcher;
 
     # Default dispatcher
-    require Sub::Multi::Tiny::DefaultDispatcher;
-    return Sub::Multi::Tiny::DefaultDispatcher::MakeDispatcher($hr);
+    require Sub::Multi::Tiny::Dispatcher::Default;
+    return Sub::Multi::Tiny::Dispatcher::Default::MakeDispatcher($hr);
 } #_make_dispatcher
 
 1;

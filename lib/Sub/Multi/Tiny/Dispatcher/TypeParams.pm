@@ -1,4 +1,4 @@
-package Sub::Multi::Tiny::DefaultDispatcher;
+package Sub::Multi::Tiny::Dispatcher::TypeParams;
 
 use 5.006;
 use strict;
@@ -8,6 +8,7 @@ use warnings;
 
 use Guard;
 use Sub::Multi::Tiny::Util qw(_hlog _line_mark_string);
+use Type::Params qw(multisig);
 
 our $VERSION = '0.000005'; # TRIAL
 
@@ -15,16 +16,24 @@ our $VERSION = '0.000005'; # TRIAL
 
 =head1 NAME
 
-Sub::Multi::Tiny::DefaultDispatcher - Default dispatcher-maker for Sub::Multi::Tiny
+Sub::Multi::Tiny::Dispatcher::TypeParams - Dispatcher-maker using Type::Params for Sub::Multi::Tiny
 
 =head1 SYNOPSIS
 
-    require Sub::Multi::Tiny::DefaultDispatcher;
-    my $dispatcher_coderef =
-        Sub::Multi::Tiny::DefaultDispatcher::MakeDispatcher({impls=>[]...});
+    # In a multisub
+    require Sub::Multi::Tiny qw($param D:TypeParams);   # in a multisub
 
-See L<Sub::Multi::Tiny> for more.  This module does not export any symbols
-(or even have the capability to do so!).
+    # Internals of Sub::Multi::Tiny
+    use Type::Params;
+    my $dispatcher_coderef =
+        Sub::Multi::Tiny::Dispatcher::TypeParams::MakeDispatcher({impls=>[]...});
+
+This module dispatches to any function that can be distinguished
+by the C<multisig> function in L<Type::Params>.
+See L<Type::Params/MULTIPLE SIGNATURES>.
+
+See L<Sub::Multi::Tiny> for more about the usage of this module.
+This module does not export any symbols.
 
 =head1 FUNCTIONS
 
@@ -65,7 +74,7 @@ EOT
 
 Make the default dispatcher for the given multi.  See L</SYNOPSIS>.
 
-TODO expand.  For now, only dispatches based on arity.
+TODO RESUME HERE.
 
 =cut
 
@@ -73,7 +82,11 @@ sub MakeDispatcher {
     my $hr = shift; # Has possible_params and impls arrayrefs
     my $code = '';
     _hlog { require Data::Dumper;
-            "Making default dispatcher for: ", Data::Dumper->Dump([$hr], ['multisub']) };
+            "Making Type::Params dispatcher for: ",
+                Data::Dumper->Dump([$hr], ['multisub']) };
+
+    # TODO make a typecheck arrayref for multisig()
+=for comment
 
     # Sort the candidates
     my (%candidates_by_arity, %copiers_by_arity);   # TODO make this cleaner
@@ -132,6 +145,10 @@ EOT
 
     _hlog { "\nDispatcher for $hr->{defined_in}\():\n$code\n" } 2;
     return eval $code;
+
+=cut
+
+    die 'Unimplemented';
 } #MakeDispatcher
 
 1;

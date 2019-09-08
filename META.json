@@ -53,6 +53,7 @@
             "Guard" : "1.023",
             "Import::Into" : "1.002005",
             "Text::Balanced" : "2.01",
+            "Type::Params" : "1.004004",
             "attributes" : "0",
             "enum" : "1.08",
             "perl" : "5.008001",
@@ -73,7 +74,10 @@
             "Data::PowerSet" : "0.05",
             "IPC::Run3" : "0.047",
             "Test::Fatal" : "0.014",
-            "Test::More" : "0.98"
+            "Test::More" : "0.98",
+            "Type::Tiny" : "1.004004",
+            "Types::Standard" : "0",
+            "lib::relative" : "1.000"
          }
       }
    },
