@@ -11,6 +11,7 @@ requires 'Exporter', '5.57';
 requires 'Guard', '1.023';
 requires 'Import::Into', '1.002005';
 requires 'Text::Balanced', '2.01';
+requires 'Type::Params', '1.004004';    # for TypeParamsDispatcher
 requires 'strict';
 requires 'subs';
 requires 'vars';
@@ -34,8 +35,11 @@ on 'test' => sub {
     requires 'CPAN::Meta', '2.150008';
     requires 'Data::PowerSet', '0.05';
     requires 'IPC::Run3', '0.047';
+    requires 'lib::relative', '1.000';
     requires 'Test::Fatal', '0.014';
     requires 'Test::More', '0.98';
+    requires 'Type::Tiny', '1.004004';
+    requires 'Types::Standard';
 
     recommends 'Perl::PrereqScanner', '1.023';
 };

@@ -11,8 +11,6 @@ package Sub::Multi::Tiny;
 
 use 5.006;
 use strict;
-use subs ();
-use vars ();
 use warnings;
 
 require Attribute::Handlers;    # Listed here so automated tools see it
@@ -20,8 +18,12 @@ require Attribute::Handlers;    # Listed here so automated tools see it
 use Import::Into;
 use Sub::Multi::Tiny::SigParse;
 use Sub::Multi::Tiny::Util ':all';
+use subs ();
+use vars ();
 
 our $VERSION = '0.000005'; # TRIAL
+
+use constant { true => !!1, false => !!0 };
 
 # Documentation {{{1
 
@@ -194,6 +196,7 @@ sub _parse_arglist {
 # Create the source for the M attribute handler for a given package
 sub _make_M {
     my $multi_package = shift;
+    my $P = __PACKAGE__;
     my $code = _line_mark_string
         "package $multi_package;\n";
 
@@ -227,31 +230,27 @@ EOT
     # via eval at runtime.  TODO use UNITCHECK instead to permit doing so?
     $code .= _line_mark_string <<EOT;
     die 'Dispatchers already created - please file a bug report'
-        if @{[__PACKAGE__]}\::_dispatchers_created();
+        if $P\::_dispatchers_created();
 
     my \$multi_def = \$_multisubs{'$multi_package'};
 EOT
 
     # Parse and validate the args
     $code .= _line_mark_string <<EOT;
-    my \$hrSig = @{[__PACKAGE__]}\::_parse_arglist(\$data, \$funcname);
+    my \$hrSig = $P\::_parse_arglist(\$data, \$funcname);
+    $P\::_check_and_inflate_sig(\$hrSig, \$multi_def,
+        \$funcname, \$package, \$filename, \$linenum);
 EOT
 
     $code .= _line_mark_string <<'EOT';
-    my $args = $hrSig->{parms};
-    foreach (@$args) {
-        my $name = $_->{name};
-        unless($multi_def->{possible_params}->{$name}) {
-            die "Argument $name is not listed on the 'use Sub::Multi::Tiny' line";
-        }
-    }
 EOT
 
     # Save the implementation's info for use when making the dispatcher.
     $code .= _line_mark_string <<'EOT';
     my $info = {
         code => $referent,
-        args => $args,
+        args => $hrSig->{parms},    # TODO remove eventually
+        sig => $hrSig,
 
         # For error messages
         filename => $filename,
@@ -266,6 +265,47 @@ EOT
     _hlog { "M code:\n$code\n" } 2;
     return $code;
 } #_make_M
+
+# Validate a signature and convert text to usable objects
+sub _check_and_inflate_sig {
+    my ($signature, $multi_def, $funcname, $package, $filename, $linenum) = @_;
+    my ($saw_positional, $saw_named);
+
+    my $args = $signature->{parms};
+    foreach (@$args) {
+
+        # Is the argument valid in this package?
+        my $name = $_->{name};
+        unless($multi_def->{possible_params}->{$name}) {
+            die "Argument $name is not listed on the 'use Sub::Multi::Tiny' line (used by $funcname at $filename\:$linenum";
+        }
+
+        # Is the argument out of order?
+        die "Positional arguments must precede named arguments"
+            if $saw_named && !$_->{named};
+
+        # Inflate type constraint, if any
+        $_->{type} = eval _line_mark_string <<EOT if $_->{type};
+do {
+    package $package;
+    $_->{type}  # Anything meaningful in the calling package is OK
+}
+EOT
+
+        # Inflate where clause, if any, into a closure
+        $_->{where} = eval _line_mark_string <<EOT if $_->{where};
+do {
+    package $package;
+    sub $_->{where}     # Anything meaningful in the calling package is OK
+}
+EOT
+
+        # Remember data for later
+        $saw_named ||= $_->{named};
+        $saw_positional ||= !$_->{named};
+
+    }
+} # _check_and_inflate_sig
 
 # Create a dispatcher
 sub _make_dispatcher {

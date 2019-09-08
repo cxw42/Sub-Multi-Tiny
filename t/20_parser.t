@@ -8,6 +8,11 @@ use Data::PowerSet 'powerset';
 use Test::Fatal;
 use Test::More;
 
+use constant {
+    true => !!1,
+    false => !!0,
+};
+
 # Reduce typing
 sub _p {
     Sub::Multi::Tiny::SigParse::Parse(join ' ', @_)
@@ -37,47 +42,87 @@ my %B;  # To hold all the bit strings in convenient form
     }
 }
 
-# Some success cases - positional parameters
 my $ast;
+# Success case - empty signature
+$ast = _p '';
+is_deeply $ast, {parms=>[], seen=>''}, _l;
+
+# Some success cases - positional parameters
 
 $ast = _p '$foo';
-is_deeply $ast, {parms=>[{name=>'$foo'}], seen=>$B{P}}, _l;
+is_deeply $ast, {parms=>[{name=>'$foo', named=>false, reqd=>true}],
+                seen=>$B{P}}, _l;
 
 $ast = _p 'Int $foo';
-is_deeply $ast, {parms=>[{type=>'Int', name=>'$foo'}], seen=>$B{PT}}, _l;
+is_deeply $ast, {parms=>[{type=>'Int', name=>'$foo', named=>false, reqd=>true}],
+                seen=>$B{PT}}, _l;
 
 $ast = _p '$foo where { $_ > 0 }';
-is_deeply $ast, {parms=>[{name=>'$foo', where=>'{ $_ > 0 }'}], seen=>$B{PW}}, _l;
+is_deeply $ast, {parms=>[{name=>'$foo', where=>'{ $_ > 0 }', named=>false,
+                reqd=>true}], seen=>$B{PW}}, _l;
 
 $ast = _p 'Int $foo where { $_ > 0 }';
 is_deeply $ast,
-    {parms=>[{type=>'Int', name=>'$foo', where=>'{ $_ > 0 }'}], seen=>$B{PTW}},
+    {parms=>[{type=>'Int', name=>'$foo', where=>'{ $_ > 0 }', named=>false,
+                reqd=>true}], seen=>$B{PTW}},
     _l;
 
 $ast = _p "  \n\t" . 'Int $foo where { $_ > 0 }' . "\t\t\t";
-is_deeply $ast, {parms=>[{type=>'Int', name=>'$foo', where=>'{ $_ > 0 }'}], seen=>$B{PTW}}, _l;
+is_deeply $ast, {parms=>[{type=>'Int', name=>'$foo', where=>'{ $_ > 0 }',
+        named=>false, reqd=>true}], seen=>$B{PTW}}, _l;
 
 # Some success cases - named parameters
 $ast = _p ':$foo';
-is_deeply $ast, {parms=>[{name=>'$foo', named=>1}], seen=>$B{N}}, _l;
+is_deeply $ast, {parms=>[{name=>'$foo', named=>true, reqd=>false}],
+    seen=>$B{N}}, _l;
 
 $ast = _p 'Int :$foo';
-is_deeply $ast, {parms=>[{type=>'Int', name=>'$foo', named=>1}], seen=>$B{NT}}, _l;
+is_deeply $ast, {parms=>[{type=>'Int', name=>'$foo', named=>true, reqd=>false}],
+    seen=>$B{NT}}, _l;
 
 $ast = _p ':$foo where { $_ > 0 }';
-is_deeply $ast, {parms=>[{name=>'$foo', where=>'{ $_ > 0 }', named=>1}], seen=>$B{NW}}, _l;
+is_deeply $ast, {parms=>[{name=>'$foo', where=>'{ $_ > 0 }', named=>true,
+        reqd=>false}], seen=>$B{NW}}, _l;
 
 $ast = _p 'Int :$foo where { $_ > 0 }';
 is_deeply $ast,
-    {parms=>[{type=>'Int', name=>'$foo', where=>'{ $_ > 0 }', named=>1}], seen=>$B{NTW}},
+    {parms=>[{type=>'Int', name=>'$foo', where=>'{ $_ > 0 }', named=>true,
+            reqd=>false}], seen=>$B{NTW}},
     _l;
 
 $ast = _p "  \n\t" . 'Int :$foo where { $_ > 0 }' . "\t\t\t";
-is_deeply $ast, {parms=>[{type=>'Int', name=>'$foo', where=>'{ $_ > 0 }', named=>1}], seen=>$B{NTW}}, _l;
+is_deeply $ast, {parms=>[
+        {type=>'Int', name=>'$foo', where=>'{ $_ > 0 }', named=>true,
+            reqd=>false}
+    ], seen=>$B{NTW}}, _l;
 
 # Success with both
+$ast = _p '$foo, :$bar';
+is_deeply $ast, {parms=>[
+        {name=>'$foo', named=>false, reqd=>true},
+        {name=>'$bar', named=>true, reqd=>false},
+    ], seen=>$B{NP}}, _l;
+
+$ast = _p '$foo, :$bar,';   # With trailing comma
+is_deeply $ast, {parms=>[
+        {name=>'$foo', named=>false, reqd=>true},
+        {name=>'$bar', named=>true, reqd=>false},
+    ], seen=>$B{NP}}, _l;
+
 $ast = _p "  \n\t" . 'String $bar, Int :$foo where { $_ > 0 }' . "\t\t\t";
-is_deeply $ast, {parms=>[{type=>'String', name=>'$bar'}, {type=>'Int', name=>'$foo', where=>'{ $_ > 0 }', named=>1}], seen=>$B{NPTW}}, _l;
+is_deeply $ast, {parms=>[
+        {type=>'String', name=>'$bar', named=>false, reqd=>true},
+        {type=>'Int', name=>'$foo', where=>'{ $_ > 0 }', named=>true, reqd=>false}],
+    seen=>$B{NPTW}}, _l;
+
+# Optional/reqd
+$ast = _p '$foo?';
+is_deeply $ast, {parms=>[{name=>'$foo', named=>false, reqd=>false}],
+                    seen=>$B{P}}, _l;
+
+$ast = _p ':$foo!';
+is_deeply $ast, {parms=>[{name=>'$foo', named=>true, reqd=>true}],
+                    seen=>$B{N}}, _l;
 
 # Some failure cases
 like exception { _p '   {x} $foo,  @abar  , 42[bar] %something {long one}' },

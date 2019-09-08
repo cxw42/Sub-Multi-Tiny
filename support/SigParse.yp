@@ -71,11 +71,8 @@ And then:
 # Type before a variable name
 %token TYPE
 
-# Positional parameter (name with a sigil).
-%token POS
-
-# Named parameter
-%token NAMED
+# Parameter, named or positional
+%token PARAM
 
 # "where BLOCK"
 %token WHERE
@@ -94,37 +91,32 @@ signature:
     ;
 
 parameter:
-        positional
-    |   named
-    ;
+        PARAM
+        {
+            _seen $_[0], $_[1]->{named} ? SEEN_NAMED : SEEN_POS;
+            return $_[1];
+        }
 
-positional:
-        POS                 {   _seen $_[0], SEEN_POS;
-                                +{name=>$_[1]}                              }
+    |   PARAM WHERE
+        {
+            _seen $_[0], $_[1]->{named} ? SEEN_NAMED : SEEN_POS;
+            _seen $_[0], SEEN_WHERE;
+            return +{%{$_[1]}, where=>$_[2]};
+        }
 
-    |   POS WHERE           {   _seen $_[0], SEEN_POS, SEEN_WHERE;
-                                +{name=>$_[1], where=>$_[2]}                }
+    |   TYPE PARAM
+        {
+            _seen $_[0], $_[2]->{named} ? SEEN_NAMED : SEEN_POS;
+            _seen $_[0], SEEN_TYPE;
+            return +{%{$_[2]}, type => $_[1]};
+        }
 
-    |   TYPE POS            {   _seen $_[0], SEEN_TYPE, SEEN_POS;
-                                +{name=>$_[2],               type => $_[1]} }
-
-    |   TYPE POS WHERE      {   _seen $_[0], SEEN_TYPE, SEEN_POS, SEEN_WHERE;
-                                +{name=>$_[2], where=>$_[3], type => $_[1]} }
-    ;
-
-named:
-        NAMED               {   _seen $_[0], SEEN_NAMED;
-                                +{name=>$_[1], named=>1}                    }
-
-    |   NAMED WHERE         {   _seen $_[0], SEEN_NAMED, SEEN_WHERE;
-                                +{name=>$_[1], named=>1, where=>$_[2]}      }
-
-    |   TYPE NAMED          {   _seen $_[0], SEEN_TYPE, SEEN_NAMED;
-                                +{name=>$_[2], named=>1, type => $_[1]}     }
-
-    |   TYPE NAMED WHERE    {   _seen $_[0], SEEN_TYPE, SEEN_NAMED, SEEN_WHERE;
-                                +{name=>$_[2], named=>1, where=>$_[3],
-                                    type => $_[1]}                          }
+    |   TYPE PARAM WHERE
+        {
+            _seen $_[0], $_[2]->{named} ? SEEN_NAMED : SEEN_POS;
+            _seen $_[0], SEEN_TYPE, SEEN_WHERE;
+            return +{%{$_[2]}, where=>$_[3], type => $_[1]}
+        }
     ;
 
 %%
@@ -146,9 +138,16 @@ sub _next_token {
 
     $$text =~ m/\G,/gc and return (SEPAR => 0); # 0 is a dummy value
 
-    $$text =~ m/\G([\$\@\%\&\*]\w+)\b/gc and return (POS => $1) ;
-
-    $$text =~ m/\G:([\$\@\%\&\*]\w+)\b/gc and return (NAMED => $1) ;
+    if($$text =~ m/\G([:]?)([\$\@\%\&\*]\w+)\b([?!]?)/gc) {
+        my $retval = {};
+        $retval->{name} = $2;
+        $retval->{named} = !!$1;
+        $retval->{reqd} = (
+            ($retval->{named} && $3 eq '!') ||  # Named: optional unless !
+            (!$retval->{named} && $3 ne '?')    # Positional: reqd unless ?
+        );
+        return (PARAM => $retval);
+    }
 
     if($$text =~ m/\Gwhere\s*\{/gci) {
         pos($$text) -= 1;    # Get the lbrace back
@@ -218,8 +217,11 @@ Parse arguments.  Usage:
 =cut
 
 sub Parse {
-    my $text = shift or
-        (require Carp, Carp::croak 'Parse: Need a signature to parse');
+    my $text = shift;
+    unless(defined $text) {
+        require Carp;
+        Carp::croak 'Parse: Need a signature to parse';
+    }
 
     my $parser = __PACKAGE__->new;
     my $hrData = $parser->YYData;

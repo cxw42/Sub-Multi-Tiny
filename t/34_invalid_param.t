@@ -13,16 +13,15 @@ plan tests => 2;
 #use Sub::Multi::Tiny::Util '*VERBOSE';
 #BEGIN { $VERBOSE = 2; }
 
-# --- Attempts to create two candidates with the same arity ------------
-# Two candidates with the same arity and no other distinguishing
-# features die when the dispatcher is made.
+# We have to run the test in a separate Perl process so we can see
+# errors at INIT time
 
 # Find the Perl file to run
-my $pl_file = find_file_in_t('32_same_arity.pl', 'r');
+my $pl_file = find_file_in_t('34_invalid_param.pl', 'r');
 my ($out, $err, $exitstatus) = run_perl([$pl_file]);
 
 cmp_ok $exitstatus>>8, '!=', 0, "returned a failure indication";
-like $err, qr/distinguish.*arity/,
-    "detected two same-arity candidates";
+like $err, qr/Argument.+is not listed/,
+    'detected non-listed variable in signature';
 
 # vi: set fdm=marker: #
