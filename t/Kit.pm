@@ -36,7 +36,6 @@ sub get_perl_filename {
 
 # find_file_in_t($filename[, checks]).  Assumes caller is in t/.
 sub find_file_in_t {
-$DB::single=1;
     my (undef, $filename) = caller;
 
     my $here = abs_path($filename);

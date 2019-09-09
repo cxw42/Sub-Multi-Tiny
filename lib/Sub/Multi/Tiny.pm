@@ -318,6 +318,7 @@ sub _check_and_inflate_sig {
 
         # Inflate type constraint, if any
         if($_->{type}) {
+            _hlog { In => $package, "evaluating type '$_->{type}'" };
             $temp = eval _line_mark_string <<EOT;
 do {
     package $package;
@@ -330,6 +331,7 @@ EOT
 
         # Inflate where clause, if any, into a closure
         if($_->{where}) {
+            _hlog { In => $package, "evaluating 'where' clause '$_->{where}'" };
             $temp = eval _line_mark_string <<EOT;
 do {
     package $package;
