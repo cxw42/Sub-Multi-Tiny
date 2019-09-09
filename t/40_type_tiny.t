@@ -9,27 +9,24 @@ use Test::More;
 diag "Type::Tiny / Types::Standard";
 {
     package main::my_multi;
-    use Sub::Multi::Tiny qw($foo $bar);
-    use Type::Tiny;
-    use Types::Standard;
-
-    sub first :M(Str $foo) {
-        return "Hello, $foo!";
-    }
+    use Sub::Multi::Tiny qw(D:TypeParams $foo $bar);
+        # D:TypeParams -> use that dispatcher, which pulls in Type::Tiny
+    use Types::Standard qw(Str Int);
 
     sub second :M(Int $foo) {
         return $foo + 42;
+    }
+
+    sub first :M(Str $foo) {
+        return "Hello, $foo!";
     }
 
 }
 
 ok do { no strict 'refs'; defined *{"main::my_multi"}{CODE} }, 'my_multi() exists';
 
-TODO: {
-    local $TODO = 'Not yet implemented';
-    is my_multi("world"), 'Hello, world!', 'Str multi';
-    cmp_ok my_multi(0), '==', 42, 'Int multi';
-    cmp_ok my_multi(42), '==', 84, 'Int multi';
-}
+is my_multi("world"), 'Hello, world!', 'Str multi';
+cmp_ok my_multi(0), '==', 42, 'Int multi';
+cmp_ok my_multi(42), '==', 84, 'Int multi';
 
 done_testing;

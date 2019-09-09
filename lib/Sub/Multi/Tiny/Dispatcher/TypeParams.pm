@@ -6,9 +6,14 @@ use warnings;
 
 #use Data::Dumper;   # DEBUG
 
+use parent 'Exporter';
+use vars::i '@EXPORT' => qw(MakeDispatcher);
+
 use Guard;
-use Sub::Multi::Tiny::Util qw(_hlog _line_mark_string);
+use Import::Into;
+use Sub::Multi::Tiny::Util qw(_hlog _line_mark_string _complete_dispatcher);
 use Type::Params qw(multisig);
+use Type::Tiny ();
 
 our $VERSION = '0.000005'; # TRIAL
 
@@ -21,16 +26,20 @@ Sub::Multi::Tiny::Dispatcher::TypeParams - Dispatcher-maker using Type::Params f
 =head1 SYNOPSIS
 
     # In a multisub
-    require Sub::Multi::Tiny qw($param D:TypeParams);   # in a multisub
+    require Sub::Multi::Tiny qw($param D:TypeParams);
 
     # Internals of Sub::Multi::Tiny
     use Type::Params;
     my $dispatcher_coderef =
         Sub::Multi::Tiny::Dispatcher::TypeParams::MakeDispatcher({impls=>[]...});
 
-This module dispatches to any function that can be distinguished
-by the C<multisig> function in L<Type::Params>.
-See L<Type::Params/MULTIPLE SIGNATURES>.
+This module dispatches to any function that can be distinguished by the
+C<multisig> function in L<Type::Params>.  See
+L<Type::Params/MULTIPLE SIGNATURES>.  The candidates must be listed with more
+specific first, since they are tried top to bottom.  For example, constraint
+L<Types::Standard/Str> matches any scalar (as of Types::Standard v1.004004), so
+it should be listed after more specific constraints such as
+L<Types::Standard/Int>.
 
 See L<Sub::Multi::Tiny> for more about the usage of this module.
 This module does not export any symbols.
@@ -42,7 +51,10 @@ This module does not export any symbols.
 # }}}1
 
 # Make a sub to copy from @_ into package variables.
+# TODO FIXME - At present, this just copies positional parameters.
+# Update it to handle named parameters &c.
 sub _make_copier {
+    warn "Not yet correctly implemented!";  # XXX HACK
     my ($defined_in, $impl) = @_;
     _hlog { require Data::Dumper;
         Data::Dumper->Dump([\@_],['_make_copier']) } 2;
@@ -74,9 +86,14 @@ EOT
 
 Make the default dispatcher for the given multi.  See L</SYNOPSIS>.
 
-TODO RESUME HERE.
-
 =cut
+
+# uniquify constraint names
+my $_constraint_idx = 0;
+
+# Our own "any" type
+my $_any_type = Type::Tiny->new(name => 'Any_SMTD_TypeParams');
+    # Default constraint accepts anything
 
 sub MakeDispatcher {
     my $hr = shift; # Has possible_params and impls arrayrefs
@@ -85,71 +102,70 @@ sub MakeDispatcher {
             "Making Type::Params dispatcher for: ",
                 Data::Dumper->Dump([$hr], ['multisub']) };
 
-    # TODO make a typecheck arrayref for multisig()
-=for comment
-
-    # Sort the candidates
-    my (%candidates_by_arity, %copiers_by_arity);   # TODO make this cleaner
+    # Make an array of typechecks for multisig()
+    my (@sigs, @impls, @copiers);
     foreach my $impl (@{$hr->{impls}}) {
-        my $arity = @{$impl->{args}};
-        die "I can't yet distinguish between candidates of the same arity"
-            if exists $candidates_by_arity{$arity};
-        $candidates_by_arity{$arity} = $impl->{code};
-        $copiers_by_arity{$arity} =
-            _make_copier($hr->{defined_in}, $impl);
+        my @sig;
+        foreach my $param (@{$impl->{args}}) {
+
+            # Sanity checks.  TODO FIXME remove the need for these!
+            die "I don't yet know how to handle named arguments"
+                if $param->{named};
+            die "I don't yet know how to handle optional arguments"
+                if !$param->{reqd};
+
+            # Make the constraint
+            my $constraint;
+            if($param->{type} && $param->{where}) {
+                $constraint = $param->{type} & $param->{where};
+                    # Subtype - see http://blogs.perl.org/users/toby_inkster/2014/08/typetiny-tricks-1-quick-intersections.html
+            } elsif($param->{type}) {
+                $constraint = $param->{type};
+            } elsif($param->{where}) {
+                $constraint = Type::Tiny->new(
+                    name => 'Constraint' . $_constraint_idx++ . '_' .
+                        substr($param->{name}, 1),
+                    constraint => $param->{where},
+                );
+            } else {    # No constraint
+                $constraint = $_any_type;
+            }
+
+            # Add it to the signature
+            push @sig, $constraint;
+        }
+        push @sigs, [@sig];
+        push @impls, $impl->{code};
+        push @copiers, _make_copier($hr->{defined_in}, $impl);  # XXX
     }
+
+    my $checker = multisig(@sigs);
 
     # Make the dispatcher
-    $code .= _line_mark_string <<EOT;
-        sub {
-            # Find the candidate
-            my \$arity = scalar \@_;
-            my \$candidate = \$candidates_by_arity{\$arity};
-            die "No candidate found for $hr->{defined_in}\() with arity " .
-                (scalar \@_) unless \$candidate;
-            my \$copier = \$copiers_by_arity{\$arity};
-
-            # Save the present values of the parameters
-EOT
-
-    my $restore = '';
-    foreach(keys %{$hr->{possible_params}}) {
-        my ($sigil, $name) = /^(.)(.+)$/;
-        $code .= _line_mark_string
-            "my ${sigil}saved_${name} = ${sigil}$hr->{defined_in}\::${name};\n";
-        $restore .= _line_mark_string
-            "${sigil}$hr->{defined_in}\::${name} = ${sigil}saved_${name};\n";
-    }
-
-    $code .= _line_mark_string <<EOT;
-            # Create the guard
-            my \$guard = Guard::guard {
-$restore
-            }; #End of guard
-EOT
-
     $code .= _line_mark_string <<'EOT';
-
-            # Copy the parameters into the variables the candidate
-            # will access them from
-            &$copier;   # $copier gets @_ automatically
-
-            # Pass the guard so the parameters will be reset once \$candidate
-            # finishes running.
-            @_ = ($guard);
-
-            # Invoke the selected candidate
-            goto &$candidate;
-        } #dispatcher
+            # Find the candidate
+            local @_ = $data[0]->(@_);      # $checker.  Dies on error.
+            $candidate = $data[1]->[${^TYPE_PARAMS_MULTISIG}];   # impls
+            $copier = $data[2]->[${^TYPE_PARAMS_MULTISIG}];      # copiers
 EOT
 
-    _hlog { "\nDispatcher for $hr->{defined_in}\():\n$code\n" } 2;
-    return eval $code;
+    return _complete_dispatcher($hr, $code, $checker, \@impls, \@copiers);
+} #MakeDispatcher
+
+=head2 import
+
+When used, also imports L<Type::Tiny> into the caller's namespace (since
+C<Type::Tiny> types are how this dispatcher functions!).
+The caller may also wish to import L<Types::Standard>, but we don't do so
+here in the interest of generality.
 
 =cut
 
-    die 'Unimplemented';
-} #MakeDispatcher
+sub import {
+    my $target = caller;
+    __PACKAGE__->export_to_level(1, @_);
+    Type::Tiny->import::into($target);
+}
 
 1;
 __END__

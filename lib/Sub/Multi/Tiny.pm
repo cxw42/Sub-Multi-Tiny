@@ -123,6 +123,10 @@ are all the parameter variables that the multisubs will use.  C<import>
 creates these as package variables so that they can be used unqualified
 in the multisub implementations.
 
+A parameter C<D:Dispatcher> can also be given to specify the dispatcher to
+use.  If C<Dispatcher> includes a double-colon, it will be used as a full
+package name.  Otherwise, C<Sub::Multi::Tiny::Dispatcher::> will be prepended.
+
 =cut
 
 sub import {
@@ -147,9 +151,33 @@ sub import {
 
     # Create the vars - they will be accessed as package variables.
     # TODO: parameters of the form D:<foo> import dispatcher <foo>.
-    my @possible_params = @_;
+    my @possible_params;
+    my $dispatcher = 'Default';
+    foreach (@_) {
+        if(/^D:(.*)$/) {
+            die '"D:" must be followed by a dispatcher class' unless $1;
+            $dispatcher=$1;
+        } elsif(/^.:/) {
+            die '".:..." forms reserved - did you mean "D:DispatcherClass"?';
+        } else {
+            push @possible_params, $_;
+        }
+    }
+
+    # Load the parameter variables as package variables
     _croak "Please list the sub parameters" unless @possible_params;
     vars->import::into($multi_package, @possible_params);
+
+    # Load the dispatcher
+    $dispatcher = __PACKAGE__ . "::Dispatcher::$dispatcher"
+        unless index($dispatcher, '::') != -1;
+
+    eval "require $dispatcher";
+    die "Could not load dispatcher $dispatcher, requested by $multi_package: $@"
+        if $@;
+
+    _hlog { $multi_package, 'using dispatcher', $dispatcher };
+    ${dispatcher}->import::into($multi_package);
 
     # Make a stub that we will redefine later
     _hlog { "Making $multi_package\()" } ;
@@ -213,17 +241,19 @@ sub M :ATTR(CODE,RAWDATA) {
     _hlog { require Data::Dumper;
             'In ', __PACKAGE__, "::M: \n",
             Data::Dumper->Dump([\@_], ['attr_args']) } 2;
+
     my ($package, $symbol, $referent, $attr, $data, $phase,
         $filename, $linenum) = @_;
     my $funcname = "$package\::" . *{$symbol}{NAME};
+
     _hlog {     # Code from Attribute::Handlers, license perl_5
-        ref($referent), " ",
-        $funcname, " ",
-        "($referent) ", "was just declared ",
-        "and ascribed the ${attr} attribute ",
-        "with data ($data)\n",
-        "in phase $phase\n",
-        "in file $filename at line $linenum\n"
+        ref($referent),
+        $funcname,
+        "($referent)", "was just declared",
+        "and ascribed the ${attr} attribute",
+        "with data ($data)",
+        "in phase $phase",
+        "in file $filename at line $linenum"
     } 2;
 EOT
 
@@ -273,6 +303,7 @@ sub _check_and_inflate_sig {
     my ($saw_positional, $saw_named);
 
     my $args = $signature->{parms};
+    my $temp;
     foreach (@$args) {
 
         # Is the argument valid in this package?
@@ -286,20 +317,28 @@ sub _check_and_inflate_sig {
             if $saw_named && !$_->{named};
 
         # Inflate type constraint, if any
-        $_->{type} = eval _line_mark_string <<EOT if $_->{type};
+        if($_->{type}) {
+            $temp = eval _line_mark_string <<EOT;
 do {
     package $package;
     $_->{type}  # Anything meaningful in the calling package is OK
 }
 EOT
+            die "In $package: Could not understand type '$_->{type}': $@" if $@;
+            $_->{type} = $temp;
+        }
 
         # Inflate where clause, if any, into a closure
-        $_->{where} = eval _line_mark_string <<EOT if $_->{where};
+        if($_->{where}) {
+            $temp = eval _line_mark_string <<EOT;
 do {
     package $package;
     sub $_->{where}     # Anything meaningful in the calling package is OK
 }
 EOT
+            die "In $package: Could not understand 'where' clause '$_->{where}': $@" if $@;
+            $_->{where} = $temp;
+        }
 
         # Remember data for later
         $saw_named ||= $_->{named};

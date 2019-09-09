@@ -5,11 +5,13 @@ requires 'perl', '5.008001';
 requires 'Attribute::Handlers', '0.79';
 requires 'attributes';
 requires 'Carp';
+requires 'constant';
 requires 'Data::Dumper';
 requires 'enum', '1.08';
 requires 'Exporter', '5.57';
 requires 'Guard', '1.023';
 requires 'Import::Into', '1.002005';
+requires 'parent';
 requires 'Text::Balanced', '2.01';
 requires 'Type::Params', '1.004004';    # for Dispatcher::TypeParams
 requires 'strict';

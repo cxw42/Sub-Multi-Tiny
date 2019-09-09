@@ -7,7 +7,7 @@ use warnings;
 #use Data::Dumper;   # DEBUG
 
 use Guard;
-use Sub::Multi::Tiny::Util qw(_hlog _line_mark_string);
+use Sub::Multi::Tiny::Util qw(_hlog _line_mark_string _complete_dispatcher);
 
 our $VERSION = '0.000005'; # TRIAL
 
@@ -90,50 +90,20 @@ sub MakeDispatcher {
 
     # Make the dispatcher
     $code .= _line_mark_string <<EOT;
-        sub {
             # Find the candidate
             my \$arity = scalar \@_;
-            my \$candidate = \$candidates_by_arity{\$arity};
+            \$candidate = \$data[0]->{\$arity};
             die "No candidate found for $hr->{defined_in}\() with arity " .
                 (scalar \@_) unless \$candidate;
-            my \$copier = \$copiers_by_arity{\$arity};
-
-            # Save the present values of the parameters
+            \$copier = \$data[1]->{\$arity};
 EOT
 
-    my $restore = '';
-    foreach(keys %{$hr->{possible_params}}) {
-        my ($sigil, $name) = /^(.)(.+)$/;
-        $code .= _line_mark_string
-            "my ${sigil}saved_${name} = ${sigil}$hr->{defined_in}\::${name};\n";
-        $restore .= _line_mark_string
-            "${sigil}$hr->{defined_in}\::${name} = ${sigil}saved_${name};\n";
-    }
+    return _complete_dispatcher($hr, $code,
+            # @data used by $code
+            \%candidates_by_arity,
+            \%copiers_by_arity
+    );
 
-    $code .= _line_mark_string <<EOT;
-            # Create the guard
-            my \$guard = Guard::guard {
-$restore
-            }; #End of guard
-EOT
-
-    $code .= _line_mark_string <<'EOT';
-
-            # Copy the parameters into the variables the candidate
-            # will access them from
-            &$copier;   # $copier gets @_ automatically
-
-            # Pass the guard so the parameters will be reset once \$candidate
-            # finishes running.
-            @_ = ($guard);
-
-            # Invoke the selected candidate
-            goto &$candidate;
-        } #dispatcher
-EOT
-
-    _hlog { "\nDispatcher for $hr->{defined_in}\():\n$code\n" } 2;
-    return eval $code;
 } #MakeDispatcher
 
 1;

@@ -8,7 +8,8 @@ use Exporter qw(import);
 use vars::i [
     '$VERBOSE' => 0,    # Set this to a positive int for extra output on STDERR
     '@EXPORT' => [],
-    '@EXPORT_OK' => [qw(_carp _croak _hlog _line_mark_string *VERBOSE)],
+    '@EXPORT_OK' => [qw(_carp _croak _hlog _line_mark_string _complete_dispatcher
+                        *VERBOSE)],
 ];
 use vars::i '%EXPORT_TAGS' => { all => [@EXPORT, @EXPORT_OK] };
 
@@ -146,6 +147,94 @@ sub _hlog (&;$) {
     }
     print STDERR "$msg\n";
 } #_hlog()
+
+=head2 _complete_dispatcher
+
+Makes a standard dispatcher, given code to initialize certain variables.
+Usage:
+
+    my $code = "...";   # See requirements below
+    my $subref = _complete_dispatcher($multisub_hashref, $code[, ...]);
+
+The C<$code> argument will be inlined as-is into the generated dispatcher.
+The C<$code> must:
+
+=over
+
+=item *
+
+Pick which multisub candidate to use, given args in C<@_>;
+
+=item *
+
+Put the subref of that candidate in C<$candidate>; and
+
+=item *
+
+Put a subref in C<$copier> of a routine that will copy from C<@_> into
+the package variables created by L<Sub::Multi::Tiny/import>.
+
+Any arguments to C<_complete_dispatcher> after C<$code> are saved in C<my @data>,
+which C<$code> can access.
+
+=cut
+
+sub _complete_dispatcher {
+    my ($hr, $inner_code, @data) = @_;
+    my $caller = caller;
+    _hlog { require Data::Dumper;
+            "_complete_dispatcher making $caller dispatcher for:",
+                Data::Dumper->Dump([$hr], ['multisub']) };
+
+    # Make the dispatcher
+    my $code = _line_mark_string <<EOT;
+        sub {
+            # Find the candidate
+            my (\$candidate, \$copier);
+
+$inner_code
+
+            # Save the present values of the parameters
+EOT
+
+    my $restore = '';
+    foreach(keys %{$hr->{possible_params}}) {
+        my ($sigil, $name) = /^(.)(.+)$/;
+        $code .= _line_mark_string
+            "my ${sigil}saved_${name} = ${sigil}$hr->{defined_in}\::${name};\n";
+        $restore .= _line_mark_string
+            "${sigil}$hr->{defined_in}\::${name} = ${sigil}saved_${name};\n";
+    }
+
+    $code .= _line_mark_string <<EOT;
+            # Create the guard
+            my \$guard = Guard::guard {
+
+$restore
+
+            }; #End of guard
+EOT
+
+    $code .= _line_mark_string <<'EOT';
+
+            # Copy the parameters into the variables the candidate
+            # will access them from
+            &$copier;   # $copier gets @_ automatically
+
+            # Pass the guard so the parameters will be reset once \$candidate
+            # finishes running.
+            @_ = ($guard);
+
+            # Invoke the selected candidate
+            goto &$candidate;
+        } #dispatcher
+EOT
+
+    _hlog { $caller, "dispatcher for $hr->{defined_in}\():\n$code\n" } 2;
+    my $sub = eval $code;
+    die "Could not create dispatcher for $hr->{defined_in}: $@" if $@;
+    return $sub;
+} # _complete_dispatcher
 
 1;
 __END__
