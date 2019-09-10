@@ -65,7 +65,18 @@ sub run_perl {
     $in = '' unless defined $in;
     my ($out, $err);
 
-    my @cmd = ($perl, (map { "-I$_" } @INC), @$lrArgs);
+    # Check if we are running under cover(1) from Devel::Cover
+    my $is_covering = !!(eval 'Devel::Cover::get_coverage()');
+    diag $is_covering ? 'Devel::Cover running' : 'Devel::Cover not covering';
+
+    # Note: See App-PRT/t/App-PRT-CLI.t for code to find test scripts in
+    # script vs. blib/script.
+
+    # Make the command to run script/prt.
+    my @cmd = ($perl, $is_covering ? ('-MDevel::Cover=-silent,1') : ());
+
+    push @cmd, map { "-I$_" } @INC;
+    push @cmd, @$lrArgs;
     diag 'Running ', join ' ', @cmd;
     run3 \@cmd, \$in, \$out, \$err;     # Dies on error
 
