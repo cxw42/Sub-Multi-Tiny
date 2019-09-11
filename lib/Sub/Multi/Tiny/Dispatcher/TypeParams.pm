@@ -35,14 +35,26 @@ Sub::Multi::Tiny::Dispatcher::TypeParams - Dispatcher-maker using Type::Params f
 
 This module dispatches to any function that can be distinguished by the
 C<multisig> function in L<Type::Params>.  See
-L<Type::Params/MULTIPLE SIGNATURES>.  The candidates must be listed with more
+L<Type::Params/MULTIPLE SIGNATURES>.
+
+See L<Sub::Multi::Tiny> for more about the usage of this module.
+This module does not export any symbols.
+
+=head1 RESTRICTIONS
+
+=head2 Candidate order
+
+The candidates must be listed with more
 specific first, since they are tried top to bottom.  For example, constraint
 L<Types::Standard/Str> matches any scalar (as of Types::Standard v1.004004), so
 it should be listed after more specific constraints such as
 L<Types::Standard/Int>.
 
-See L<Sub::Multi::Tiny> for more about the usage of this module.
-This module does not export any symbols.
+=head2 Named parameters
+
+C<Type::Parameters::multisig()> does not directly support named parameters.
+Instead, use a slurpy hash (C<Dict>) parameter to collect named parameters.
+An example is given in L<Type::Params/Mixed Positional and Named Parameters>.
 
 =head1 FUNCTIONS
 
@@ -51,10 +63,10 @@ This module does not export any symbols.
 # }}}1
 
 # Make a sub to copy from @_ into package variables.
-# TODO FIXME - At present, this just copies positional parameters.
-# Update it to handle named parameters &c.
+# The resulting sub copies positional parameters.
+# This is sufficient for named parameters because Type::Params::multisig()
+# fakes named parameters with a slurpy hash.
 sub _make_copier {
-    warn "Not yet correctly implemented!";  # XXX HACK
     my ($defined_in, $impl) = @_;
     _hlog { require Data::Dumper;
         Data::Dumper->Dump([\@_],['_make_copier']) } 2;
