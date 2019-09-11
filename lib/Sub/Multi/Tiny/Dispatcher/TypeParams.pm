@@ -11,7 +11,8 @@ use vars::i '@EXPORT' => qw(MakeDispatcher);
 
 use Guard;
 use Import::Into;
-use Sub::Multi::Tiny::Util qw(_hlog _line_mark_string _complete_dispatcher);
+use Sub::Multi::Tiny::Util qw(_hlog _line_mark_string _make_positional_copier
+                                _complete_dispatcher);
 use Type::Params qw(multisig);
 use Type::Tiny ();
 
@@ -40,7 +41,7 @@ L<Type::Params/MULTIPLE SIGNATURES>.
 See L<Sub::Multi::Tiny> for more about the usage of this module.
 This module does not export any symbols.
 
-=head1 RESTRICTIONS
+=head1 USAGE NOTES
 
 =head2 Candidate order
 
@@ -61,38 +62,6 @@ An example is given in L<Type::Params/Mixed Positional and Named Parameters>.
 =cut
 
 # }}}1
-
-# Make a sub to copy from @_ into package variables.
-# The resulting sub copies positional parameters.
-# This is sufficient for named parameters because Type::Params::multisig()
-# fakes named parameters with a slurpy hash.
-sub _make_copier {
-    my ($defined_in, $impl) = @_;
-    _hlog { require Data::Dumper;
-        Data::Dumper->Dump([\@_],['_make_copier']) } 2;
-
-    my $code = _line_mark_string <<'EOT';
-sub {
-    (
-EOT
-
-    $code .=
-        join ",\n",
-            map {
-                my ($sigil, $name) = $_->{name} =~ m/^(.)(.+)$/;
-                _line_mark_string
-                    "        ${sigil}$defined_in\::${name}"
-            } #foreach arg
-                @{$impl->{args}};
-
-    $code .= _line_mark_string <<'EOT';
-    ) = @_;
-} #copier
-EOT
-
-    _hlog { "Copier for $impl->{candidate_name}\():\n", $code } 2;
-    return eval $code;
-} #_make_copier
 
 =head2 MakeDispatcher
 
@@ -145,11 +114,16 @@ sub MakeDispatcher {
 
             # Add it to the signature
             push @sig, $constraint;
-        }
+        } #foreach param
+
         push @sigs, [@sig];
         push @impls, $impl->{code};
-        push @copiers, _make_copier($hr->{defined_in}, $impl);  # XXX
-    }
+
+        # Use a straight positional copier.  This is sufficient even for
+        # named parameters because Type::Params::multisig()
+        # fakes named parameters with a slurpy hash.
+        push @copiers, _make_positional_copier($hr->{defined_in}, $impl);
+    } #foreach impl
 
     my $checker = multisig(@sigs);
 

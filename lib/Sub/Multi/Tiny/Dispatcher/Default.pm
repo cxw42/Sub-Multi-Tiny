@@ -7,7 +7,8 @@ use warnings;
 #use Data::Dumper;   # DEBUG
 
 use Guard;
-use Sub::Multi::Tiny::Util qw(_hlog _line_mark_string _complete_dispatcher);
+use Sub::Multi::Tiny::Util qw(_hlog _line_mark_string _make_positional_copier
+                                _complete_dispatcher);
 
 our $VERSION = '0.000005'; # TRIAL
 
@@ -34,35 +35,6 @@ This dispatcher currently only dispatches by arity.
 
 # }}}1
 
-# Make a sub to copy from @_ into package variables.
-sub _make_copier {
-    my ($defined_in, $impl) = @_;
-    _hlog { require Data::Dumper;
-        Data::Dumper->Dump([\@_],['_make_copier']) } 2;
-
-    my $code = _line_mark_string <<'EOT';
-sub {
-    (
-EOT
-
-    $code .=
-        join ",\n",
-            map {
-                my ($sigil, $name) = $_->{name} =~ m/^(.)(.+)$/;
-                _line_mark_string
-                    "        ${sigil}$defined_in\::${name}"
-            } #foreach arg
-                @{$impl->{args}};
-
-    $code .= _line_mark_string <<'EOT';
-    ) = @_;
-} #copier
-EOT
-
-    _hlog { "Copier for $impl->{candidate_name}\():\n", $code } 2;
-    return eval $code;
-} #_make_copier
-
 =head2 MakeDispatcher
 
 Make the default dispatcher for the given multi.  See L</SYNOPSIS>.
@@ -85,7 +57,7 @@ sub MakeDispatcher {
             if exists $candidates_by_arity{$arity};
         $candidates_by_arity{$arity} = $impl->{code};
         $copiers_by_arity{$arity} =
-            _make_copier($hr->{defined_in}, $impl);
+            _make_positional_copier($hr->{defined_in}, $impl);
     }
 
     # Make the dispatcher

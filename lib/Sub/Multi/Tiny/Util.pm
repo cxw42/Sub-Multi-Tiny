@@ -8,7 +8,8 @@ use Exporter qw(import);
 use vars::i [
     '$VERBOSE' => 0,    # Set this to a positive int for extra output on STDERR
     '@EXPORT' => [],
-    '@EXPORT_OK' => [qw(_carp _croak _hlog _line_mark_string _complete_dispatcher
+    '@EXPORT_OK' => [qw(_carp _croak _hlog _line_mark_string
+                        _make_positional_copier _complete_dispatcher
                         *VERBOSE)],
 ];
 use vars::i '%EXPORT_TAGS' => { all => [@EXPORT, @EXPORT_OK] };
@@ -177,6 +178,8 @@ the package variables created by L<Sub::Multi::Tiny/import>.
 Any arguments to C<_complete_dispatcher> after C<$code> are saved in C<my @data>,
 which C<$code> can access.
 
+=back
+
 =cut
 
 sub _complete_dispatcher {
@@ -235,6 +238,43 @@ EOT
     die "Could not create dispatcher for $hr->{defined_in}: $@" if $@;
     return $sub;
 } # _complete_dispatcher
+
+=head2 _make_positional_copier
+
+Make a sub to copy from @_ into package variables.  The resulting sub copies
+positional parameters.  Usage:
+
+    my $coderef = _make_positional_copier($defined_in, $impl_hashref);
+
+=cut
+
+sub _make_positional_copier {
+    my ($defined_in, $impl) = @_;
+    _hlog { require Data::Dumper;
+        Data::Dumper->Dump([\@_],['_make_copier']) } 2;
+
+    my $code = _line_mark_string <<'EOT';
+sub {
+    (
+EOT
+
+    $code .=
+        join ",\n",
+            map {
+                my ($sigil, $name) = $_->{name} =~ m/^(.)(.+)$/;
+                _line_mark_string
+                    "        ${sigil}$defined_in\::${name}"
+            } #foreach arg
+                @{$impl->{args}};
+
+    $code .= _line_mark_string <<'EOT';
+    ) = @_;
+} #copier
+EOT
+
+    _hlog { "Copier for $impl->{candidate_name}\():\n", $code } 2;
+    return eval $code;
+} #_make_positional_copier
 
 1;
 __END__
