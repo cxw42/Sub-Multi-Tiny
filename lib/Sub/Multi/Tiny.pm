@@ -16,12 +16,13 @@ use warnings;
 require Attribute::Handlers;    # Listed here so automated tools see it
 
 use Import::Into;
+use Scalar::Util qw(looks_like_number);
 use Sub::Multi::Tiny::SigParse;
 use Sub::Multi::Tiny::Util ':all';
 use subs ();
 use vars ();
 
-our $VERSION = '0.000006'; # TRIAL
+our $VERSION = '0.000007'; # TRIAL
 
 use constant { true => !!1, false => !!0 };
 
@@ -127,13 +128,21 @@ A parameter C<D:Dispatcher> can also be given to specify the dispatcher to
 use.  If C<Dispatcher> includes a double-colon, it will be used as a full
 package name.  Otherwise, C<Sub::Multi::Tiny::Dispatcher::> will be prepended.
 
+Also sets L<Sub::Multi::Tiny::Util/$VERBOSE> if the environment variable
+C<SUB_MULTI_TINY_VERBOSE> has a truthy value.  If the C<SUB_MULTI_TINY_VERBOSE>
+value is numeric, C<$VERBOSE> is set to that value; otherwise, C<$VERBOSE> is
+set to 1.
+
 =cut
 
 sub import {
     my $multi_package = caller;     # The package that defines the multisub
     my $my_package = shift;         # The package we are
 
-    $VERBOSE = 1 if $ENV{SUB_MULTI_TINY_VERBOSE};
+    for($ENV{SUB_MULTI_TINY_VERBOSE}) {
+        last unless $_;
+        $VERBOSE = looks_like_number($_) ? 0+ $_ : 1;
+    }
 
     if(@_ && $_[0] eq ':nop') {
         _hlog { __PACKAGE__ . ':nop => Taking no action' } 0;    # Always

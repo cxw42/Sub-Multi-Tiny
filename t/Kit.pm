@@ -7,14 +7,36 @@ use strict;
 use warnings;
 
 use parent 'Exporter';
-use vars::i '@EXPORT' => qw(find_file_in_t get_perl_filename run_perl);
+use vars::i '@EXPORT' => qw(find_file_in_t get_perl_filename is_covering
+                            run_perl true false);
 
 use Config;
 use Cwd 'abs_path';
+use Data::Dumper;
 use File::Spec;
 use Import::Into;
 use IPC::Run3;
 use Test::More;
+
+# is_covering: is Devel::Cover running?
+sub is_covering {
+    return !!(eval 'Devel::Cover::get_coverage()');
+} #is_covering()
+
+# Set verbosity:
+#   - on for coverage of _hlog statements
+#   - on for debugging of test failures in <5.18    XXX DEBUG
+# Note that verbosity will also be on if $ENV{SUB_MULTI_TINY_VERBOSE} is set.
+use Sub::Multi::Tiny::Util '*VERBOSE';
+BEGIN {
+    $VERBOSE = 99 if is_covering || $] lt '5.018';
+}
+
+use constant {
+    true => !!1,
+    false => !!0,
+};
+
 
 # Get the filename of the Perl interpreter running this. {{{1
 # Modified from perlvar.
@@ -66,14 +88,13 @@ sub run_perl {
     my ($out, $err);
 
     # Check if we are running under cover(1) from Devel::Cover
-    my $is_covering = !!(eval 'Devel::Cover::get_coverage()');
-    diag $is_covering ? 'Devel::Cover running' : 'Devel::Cover not covering';
+    diag is_covering ? 'Devel::Cover running' : 'Devel::Cover not covering';
 
     # Note: See App-PRT/t/App-PRT-CLI.t for code to find test scripts in
-    # script vs. blib/script.
+    # script vs. blib/script, if that later becomes necessary.
 
     # Make the command to run script/prt.
-    my @cmd = ($perl, $is_covering ? ('-MDevel::Cover=-silent,1') : ());
+    my @cmd = ($perl, is_covering ? ('-MDevel::Cover=-silent,1') : ());
 
     push @cmd, map { "-I$_" } @INC;
     push @cmd, @$lrArgs;
@@ -87,10 +108,15 @@ sub run_perl {
 
 # Import
 sub import {
-    my $target = caller;
+    my ($target, $filename) = caller;
     __PACKAGE__->export_to_level(1, @_);
     $_->import::into($target) foreach qw(strict warnings Config Cwd
         File::Spec IPC::Run3 Test::More);
+
+    $Data::Dumper::Indent = 1;  # fixed indentation per level
+
+    diag '#' x 40;
+    diag $filename;
 }
 
 1;

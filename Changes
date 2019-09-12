@@ -2,6 +2,16 @@ Revision history for Perl extension Sub-Multi-Tiny
 
 {{$NEXT}}
 
+0.000007 2019-09-12T01:13:30Z (TRIAL RELEASE)
+
+    - The SUB_MULTI_TINY_VERBOSE environment value can have a numeric value
+    - New dependency on Scalar::Util
+    - Added voluminous test output on earlier Perls in hopes of tracking
+        down cpantesters failures.
+    - Use t/Kit.pm consistently in test files
+    - Verbose test output while covering, so the lines that prove that
+        output are covered!
+
 0.000006 2019-09-11T00:46:14Z
 
     - Added a Type::Params-based dispatcher

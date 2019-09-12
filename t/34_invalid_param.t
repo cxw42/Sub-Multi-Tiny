@@ -10,9 +10,6 @@ plan skip_all => 'MSWin32 gives a false failure on this test'
 
 plan tests => 2;
 
-#use Sub::Multi::Tiny::Util '*VERBOSE';
-#BEGIN { $VERBOSE = 2; }
-
 # We have to run the test in a separate Perl process so we can see
 # errors at INIT time
 

@@ -10,9 +10,6 @@ plan skip_all => 'MSWin32 gives a false failure on this test'
 
 plan tests => 2;
 
-#use Sub::Multi::Tiny::Util '*VERBOSE';
-#BEGIN { $VERBOSE = 2; }
-
 # --- Attempts to create two candidates with the same arity ------------
 # Two candidates with the same arity and no other distinguishing
 # features die when the dispatcher is made.

@@ -61,6 +61,11 @@ A parameter `D:Dispatcher` can also be given to specify the dispatcher to
 use.  If `Dispatcher` includes a double-colon, it will be used as a full
 package name.  Otherwise, `Sub::Multi::Tiny::Dispatcher::` will be prepended.
 
+Also sets ["$VERBOSE" in Sub::Multi::Tiny::Util](https://metacpan.org/pod/Sub::Multi::Tiny::Util#VERBOSE) if the environment variable
+`SUB_MULTI_TINY_VERBOSE` has a truthy value.  If the `SUB_MULTI_TINY_VERBOSE`
+value is numeric, `$VERBOSE` is set to that value; otherwise, `$VERBOSE` is
+set to 1.
+
 # CUSTOM DISPATCH
 
 This module includes a default dispatcher (implemented in

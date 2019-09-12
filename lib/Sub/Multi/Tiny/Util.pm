@@ -14,7 +14,7 @@ use vars::i [
 ];
 use vars::i '%EXPORT_TAGS' => { all => [@EXPORT, @EXPORT_OK] };
 
-our $VERSION = '0.000006'; # TRIAL
+our $VERSION = '0.000007'; # TRIAL
 
 
 # Documentation {{{1
@@ -31,8 +31,8 @@ Used by L<Sub::Multi::Tiny>.
 
 =head2 $VERBOSE
 
-Set this truthy for extra debug output.  Automatically set to C<1> if the
-environment variable C<SUB_MULTI_TINY_VERBOSE> has a truthy value.
+Set this truthy for extra debug output.  L<Sub::Multi::Tiny/import> sets this
+based on environment variable C<SUB_MULTI_TINY_VERBOSE>.
 
 =head1 FUNCTIONS
 
@@ -131,6 +131,12 @@ verbosity level (1 by default).
 If C<< $VERBOSE > 2 >>, the filename and line from which C<_hlog> was called
 will also be printed.
 
+B<Caution:> Within the C<{ }> block, C<@_> is the arguments I<to that block>,
+not the arguments to the calling function.  To log C<@_>, use something like:
+
+    my $argref = \@_;
+    _hlog { @$argref };
+
 =cut
 
 sub _hlog (&;$) {
@@ -184,10 +190,11 @@ which C<$code> can access.
 
 sub _complete_dispatcher {
     my ($hr, $inner_code, @data) = @_;
+    my $argref = \@_;
     my $caller = caller;
     _hlog { require Data::Dumper;
-            "_complete_dispatcher making $caller dispatcher for:",
-                Data::Dumper->Dump([$hr], ['multisub']) };
+            "_complete_dispatcher making $caller dispatcher with args:",
+                Data::Dumper->Dump($argref, [qw(multisub inner_code data)]) };
 
     # Make the dispatcher
     my $code = _line_mark_string <<EOT;
@@ -250,11 +257,25 @@ positional parameters.  Usage:
 
 sub _make_positional_copier {
     my ($defined_in, $impl) = @_;
+    my $argref = \@_;   # For hlogging
     _hlog { require Data::Dumper;
-        Data::Dumper->Dump([\@_],['_make_copier']) } 2;
+        Data::Dumper->Dump($argref,[qw(mpc_defined_in mpc_impl)]) } 2;
 
     my $code = _line_mark_string <<'EOT';
 sub {
+EOT
+
+    # XXX DEBUG: Some extra output to try to debug failures on earlier Perls.
+    $code .= _line_mark_string <<'EOT';
+    if( $] lt '5.018' || $VERBOSE > 1) {
+        require Data::Dumper;
+        require Test::More;
+        Test::More::diag "Positional copier invoked:\n" .
+            Data::Dumper->Dump([\@_],['copier_args']);
+    }
+EOT
+
+    $code .= _line_mark_string <<'EOT';
     (
 EOT
 
