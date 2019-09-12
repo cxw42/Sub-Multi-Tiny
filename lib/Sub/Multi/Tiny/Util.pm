@@ -80,7 +80,7 @@ In the first form, information from C<caller> will be used for the filename
 and line number.
 
 The C<#line> directive will point to the line after the C<_line_mark_string>
-invocation, i.e., the first line of <C$contents>.  Generally, C<$contents> will
+invocation, i.e., the first line of C<$contents>.  Generally, C<$contents> will
 be source code, although this is not required.
 
 C<$contents> must be defined, but can be empty.
