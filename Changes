@@ -2,6 +2,8 @@ Revision history for Perl extension Sub-Multi-Tiny
 
 {{$NEXT}}
 
+    - Fix t/Kit.pm to run on older Perls
+
 0.000007 2019-09-12T01:13:30Z (TRIAL RELEASE)
 
     - The SUB_MULTI_TINY_VERBOSE environment value can have a numeric value
@@ -9,7 +11,7 @@ Revision history for Perl extension Sub-Multi-Tiny
     - Added voluminous test output on earlier Perls in hopes of tracking
         down cpantesters failures.
     - Use t/Kit.pm consistently in test files
-    - Verbose test output while covering, so the lines that prove that
+    - Verbose test output while covering, so the lines that provide that
         output are covered!
 
 0.000006 2019-09-11T00:46:14Z
