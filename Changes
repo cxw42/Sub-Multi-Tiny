@@ -2,6 +2,8 @@ Revision history for Perl extension Sub-Multi-Tiny
 
 {{$NEXT}}
 
+0.000008 2019-09-13T22:16:40Z (TRIAL RELEASE)
+
     - Fix t/Kit.pm to run on older Perls
 
 0.000007 2019-09-12T01:13:30Z (TRIAL RELEASE)

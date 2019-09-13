@@ -14,7 +14,7 @@ use Sub::Multi::Tiny::Util qw(_hlog _line_mark_string _make_positional_copier
 use Type::Params qw(multisig);
 use Type::Tiny ();
 
-our $VERSION = '0.000007'; # TRIAL
+our $VERSION = '0.000008'; # TRIAL
 
 # Documentation {{{1
 
