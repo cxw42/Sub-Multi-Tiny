@@ -255,9 +255,13 @@ positional parameters.  Usage:
 
 =cut
 
+our $_positional_copier_invocation_number = 0;  # DEBUG
 sub _make_positional_copier {
     my ($defined_in, $impl) = @_;
     my $argref = \@_;   # For hlogging
+
+    my @vars;   #DEBUG
+
     _hlog { require Data::Dumper;
         Data::Dumper->Dump($argref,[qw(mpc_defined_in mpc_impl)]) } 2;
 
@@ -270,8 +274,9 @@ EOT
     if( $] lt '5.018' || $VERBOSE > 1) {
         require Data::Dumper;
         require Test::More;
-        Test::More::diag "Positional copier invoked:\n" .
-            Data::Dumper->Dump([\@_],['copier_args']);
+        Test::More::diag sprintf("Positional copier invocation %d:\n%s",
+            ++$Sub::Multi::Tiny::Util::_positional_copier_invocation_number,
+            Data::Dumper->Dump([\@_],['copier_args']));
     }
 EOT
 
@@ -279,17 +284,26 @@ EOT
     (
 EOT
 
-    $code .=
-        join ",\n",
-            map {
-                my ($sigil, $name) = $_->{name} =~ m/^(.)(.+)$/;
-                _line_mark_string
-                    "        ${sigil}$defined_in\::${name}"
-            } #foreach arg
-                @{$impl->{args}};
+    @vars = map {
+        my ($sigil, $name) = $_->{name} =~ m/^(.)(.+)$/;
+        "${sigil}$defined_in\::${name}"
+    } @{$impl->{args}};
+
+    $code .= join ",\n",
+                map { _line_mark_string
+                        "        $_" } @vars;
 
     $code .= _line_mark_string <<'EOT';
     ) = @_;
+
+    if( $] lt '5.018' || $VERBOSE > 1) {
+        Test::More::diag sprintf("After positional copier invocation %d:",
+            $Sub::Multi::Tiny::Util::_positional_copier_invocation_number);
+        Test::More::diag join "\n", map {
+            sprintf("%s = %s", $_, eval($_))
+        } @vars;
+    }
+
 } #copier
 EOT
 

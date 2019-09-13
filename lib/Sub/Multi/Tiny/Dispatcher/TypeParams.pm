@@ -128,7 +128,9 @@ sub MakeDispatcher {
     # Make the dispatcher
     $code .= _line_mark_string <<'EOT';
             # Find the candidate
-            local @_ = $data[0]->(@_);      # $checker.  Dies on error.
+            @_ = $data[0]->(@_);      # $checker.  Dies on error.
+                # NOTE: this change can't be `local`ized because `goto`
+                # undoes the `local` - see #8
             $candidate = $data[1]->[${^TYPE_PARAMS_MULTISIG}];   # impls
             $copier = $data[2]->[${^TYPE_PARAMS_MULTISIG}];      # copiers
 EOT
