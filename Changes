@@ -1,6 +1,8 @@
 Revision history for Perl extension Sub-Multi-Tiny
 
-{{$NEXT}}
+0.000009 2019-09-14T02:28:08Z (TRIAL RELEASE)
+
+    - Fix Dispatcher::TypeParams to run on older Perls (#8)
 
 0.000008 2019-09-13T22:16:40Z (TRIAL RELEASE)
 
