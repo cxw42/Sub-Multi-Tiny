@@ -2,6 +2,8 @@ Revision history for Perl extension Sub-Multi-Tiny
 
 {{$NEXT}}
 
+0.000011 2019-09-20T21:41:16Z
+
     - Fix POD typo (thanks to MANWAR)
 
 0.000010 2019-09-20T02:36:46Z (TRIAL RELEASE)
