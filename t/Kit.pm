@@ -1,3 +1,5 @@
+# -*- perl -*-
+
 # Kit.pm: test kit for Sub::Multi::Tiny
 package # hide from PAUSE
     Kit;
@@ -7,8 +9,8 @@ use strict;
 use warnings;
 
 use parent 'Exporter';
-use vars::i '@EXPORT' => qw(find_file_in_t get_perl_filename is_covering
-                            run_perl true false);
+use vars::i '@EXPORT' => qw(fails_ok find_file_in_t get_perl_filename here
+                            is_covering run_perl true false);
 
 use Config;
 use Cwd 'abs_path';
@@ -105,6 +107,40 @@ sub run_perl {
     diag "Error message was '$err'" if $err;
     return ($out, $err, $exitstatus);
 } #run_perl
+
+# here: Return the caller's line number, in parentheses.
+# Useful for the message on an ok() or is().
+sub here {
+    my (undef, undef, $lineno) = caller;
+    return "line $lineno";
+} #here
+
+# Execute a file and check its error message.  Skips on Windows.
+# Usage: fails_ok('filename in t', qr/regex error should match/);
+sub fails_ok {
+    my ($filename, $regex) = @_;
+    my (undef, undef, $lineno) = caller;
+
+    SKIP: {
+        # Skip rather than falsely fail - see
+        # https://github.com/rjbs/IPC-Run3/pull/9 and RT#95308.  Example at
+        # http://www.cpantesters.org/cpan/report/277b2ad8-6bf8-1014-b7dc-c8197f9146ad
+        skip 'MSWin32 gives a false failure on this test', 2
+            if $^O eq 'MSWin32';
+
+        # We have to run the test in a separate Perl process so we can see
+        # errors at INIT time
+
+        # Find the Perl file to run
+        my $pl_file = find_file_in_t($filename, 'r');
+        my ($out, $err, $exitstatus) = run_perl([$pl_file]);
+
+        cmp_ok $exitstatus>>8, '!=', 0,
+            "returned a failure indication (line $lineno)";
+        like $err, $regex, "error message as expected (line $lineno)";
+
+    }
+} #fails_ok
 
 # Import
 sub import {

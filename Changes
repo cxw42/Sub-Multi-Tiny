@@ -1,5 +1,15 @@
 Revision history for Perl extension Sub-Multi-Tiny
 
+{{$NEXT}}
+
+0.000010 2019-09-20T02:36:46Z (TRIAL RELEASE)
+
+    - Add tests
+    - Refactor out common test code
+    - In D:Default, die loudly on type or where checks, rather
+      than ignoring them silently.
+    - Update documentation
+
 0.000009 2019-09-14T02:28:08Z (TRIAL RELEASE)
 
     - Fix Dispatcher::TypeParams to run on older Perls (#8)
@@ -48,3 +58,4 @@ Revision history for Perl extension Sub-Multi-Tiny
 
     - Initial release to CPAN.  Only supports dispatch by arity.
 
+# vi: set ts=4 sts=4 sw=4 et ai: #
