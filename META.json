@@ -96,7 +96,7 @@
          "web" : "https://github.com/cxw42/Sub-Multi-Tiny"
       }
    },
-   "version" : "0.000011",
+   "version" : "0.000012",
    "x_authority" : "cpan:CXW",
    "x_contributors" : [
       "Mohammad S Anwar <manwar@cpan.org>"
