@@ -131,8 +131,8 @@ sub MakeDispatcher {
             @_ = $data[0]->(@_);      # $checker.  Dies on error.
                 # NOTE: this change can't be `local`ized because `goto`
                 # undoes the `local` - see #8
-            $candidate = $data[1]->[${^TYPE_PARAMS_MULTISIG}];   # impls
-            $copier = $data[2]->[${^TYPE_PARAMS_MULTISIG}];      # copiers
+            $candidate = $data[1]->[${^_TYPE_PARAMS_MULTISIG}];   # impls
+            $copier = $data[2]->[${^_TYPE_PARAMS_MULTISIG}];      # copiers
 EOT
 
     return _complete_dispatcher($hr, $code, $checker, \@impls, \@copiers);
